@@ -115,7 +115,7 @@ def create_user(email: str, password: str, tenant_id: str | None) -> None:
             if existing_user:
                 raise click.ClickException(f"user already exists: {norm}")
 
-            u = User(email=norm, password_hash=hash_password(password))
+            u = User(email=norm)
             s.add(u)
             await s.flush()
             ent = Entity(user_id=u.id, type="tracker", name="My Tracker")
@@ -148,16 +148,6 @@ def reset_password(email: str, password: str) -> None:
             tenant.password_hash = hash_password(password)
             tenant.token_version = (tenant.token_version or 0) + 1
             await id_s.commit()
-            tenant_id = tenant.tenant_id
-
-        # Keep tenant-specific user password hash in sync
-        current_tenant_id.set(tenant_id)
-        async with SessionLocal() as s:
-            u = await s.scalar(select(User).where(User.email == norm))
-            if u:
-                u.password_hash = hash_password(password)
-                u.token_version = (u.token_version or 0) + 1
-                await s.commit()
 
         click.echo("ok (existing sessions invalidated)")
 

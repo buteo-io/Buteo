@@ -11,7 +11,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from tracker_core import analytics
@@ -425,4 +425,3 @@ async def export_trip_csv(
         media_type="text/csv",
         headers=_attach(f"{t.name}_export", "csv"),
     )
-
