@@ -22,7 +22,7 @@ Buteo uses a monorepo structure:
 
 1. **Clone repository and set up environment:**
    ```bash
-   git clone https://github.com/buteo-io/buteo.git
+   git clone https://github.com/buteo-io/Buteo.git
    cd buteo
    cp .env.example .env
    ```

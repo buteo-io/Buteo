@@ -29,3 +29,7 @@ export function tPlaceCategory(category: string | null | undefined): string {
   if (!category) return "";
   return i18n.t(`places.categories.${category}`, { defaultValue: category });
 }
+
+export function tPopupLabel(key: string): string {
+  return i18n.t(`popup.${key}`);
+}

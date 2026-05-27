@@ -184,7 +184,8 @@
     "now": "now",
     "uploading": "Uploading...",
     "edit": "Edit",
-    "none": "None"
+    "none": "None",
+    "more": "More"
   },
   "auth": {
     "login": "Login",
@@ -205,7 +206,10 @@
     "custom": "Custom",
     "today": "Today",
     "24h": "24h",
-    "7d": "7d"
+    "7d": "7d",
+    "quickPresets": "Quick Presets",
+    "yesterday": "Yesterday",
+    "lastWeekend": "Last Weekend"
   },
   "map": {
     "colorBy": "Color by",
@@ -243,6 +247,12 @@
     "satellites": "Satellites",
     "createdAt": "Created at",
     "coordinates": "Coordinates"
+  },
+  "popup": {
+    "time": "Time",
+    "speed": "Speed",
+    "altitude": "Altitude",
+    "satellites": "Satellites"
   },
   "gallery": {
     "backToGrid": "Back to grid",

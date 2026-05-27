@@ -6,10 +6,7 @@
 
 ### Know where it is. Remember where it's been.
 
-[![Docker](https://img.shields.io/docker/pulls/buteo/buteo?label=Docker&style=flat-square)](https://hub.docker.com/r/buteo/buteo)
-[![License](https://img.shields.io/github/license/buteo-io/buteo?color=blue&style=flat-square)](LICENSE) ![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)
-[![GitHub Stars](https://img.shields.io/github/stars/buteo-io/buteo?style=flat-square)](https://github.com/buteo-io/buteo)
-[![Roadmap](https://img.shields.io/badge/roadmap-public-orange?style=flat-square)](https://github.com/orgs/buteo-io/projects)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 
 </div>
 
@@ -40,11 +37,11 @@ Built for road trips, not fleet management. Self-hosted, privacy-first, and desi
 
 ### Not fleet software. Not surveillance.
 
-Most GPS apps are built for businesses tracking delivery trucks. They're cold, clinical, and designed for fleet managers — not travelers. Other consumer track-and-share solutions are often overpriced, locking you into expensive, proprietary tracking hardware.
+Most GPS apps are built for businesses tracking delivery trucks. They're cold, clinical, and designed for fleet managers — not travelers. Other consumer track-and-share solutions are often overpriced, locking you into expensive, proprietary tracking hardware or charge high prices for hardware that you could get yourself for half the price.
 
 **Buteo is different.**
 
-- **Bring your own hardware:** Don't pay 150+€ for a locked-down tracker. Use any standard Teltonika tracker (40-70 €), or turn an old smartphone into a tracker using free open-source apps (Traccar Client / OwnTracks).
+- **Bring your own hardware:** Don't pay 150+€ for a locked-down tracker. Use any standard tracker (40-80€) like Teltonika FMC920, or turn an old smartphone into a tracker using free open-source apps (Traccar Client / OwnTracks / ...).
 - **One-click trips:** It just works. No over-engineered, buggy "AI trip detection". Just review your raw tracking points and trigger a clean, exact trip whenever you want.
 - **Built for memories, not monitoring:** Designed to help you remember where you've been, not spy on your driving or measure fleet efficiency.
 - **Own your data:** If you self-host, your location history never leaves your server. Period.
@@ -57,8 +54,8 @@ Most GPS apps are built for businesses tracking delivery trucks. They're cold, c
 ### 1. Clone Buteo
 
 ```bash
-git clone https://github.com/buteo-io/buteo.git
-cd buteo
+git clone https://github.com/buteo-io/Buteo.git
+cd Buteo
 ```
 
 ### 2. Configure Environment
@@ -68,6 +65,8 @@ Copy the example configuration and adjust the values (like secrets and passwords
 ```bash
 cp .env.example .env
 ```
+
+Choose your `DATABASE_TYPE` and `DATA_DIR` in the `.env` file.
 
 ### 3. Start with Docker Compose
 
@@ -90,8 +89,6 @@ docker compose run --rm api python -m tracker_core.cli.manage create-user \
 docker compose run --rm api python -m tracker_core.cli.manage create-device \
   --email you@example.com --imei 123456789012345 --name "Our Camper"
 ```
-
-> **Demo credentials** (for testing): `demo@example.com` / `demo-password-123`
 
 ---
 
@@ -170,7 +167,6 @@ See the [LICENSE](LICENSE) file for the full text.
 
 - 🌐 **Website**: [https://getbuteo.com](https://getbuteo.com) *(coming soon)*
 - 🐙 **GitHub**: [https://github.com/buteo-io](https://github.com/buteo-io)
-- 💬 **Discussions**: [https://github.com/buteo-io/buteo/discussions](https://github.com/buteo-io/buteo/discussions)
 - 📖 **Documentation**: [docs/](docs/)
 
 ---

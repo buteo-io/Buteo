@@ -205,7 +205,10 @@
     "custom": "Benutzerdefiniert",
     "today": "Heute",
     "24h": "24h",
-    "7d": "7d"
+    "7d": "7d",
+    "quickPresets": "Schnellauswahl",
+    "yesterday": "Gestern",
+    "lastWeekend": "Letztes Wochenende"
   },
   "map": {
     "colorBy": "Farben nach",
@@ -243,6 +246,12 @@
     "satellites": "Satelliten",
     "createdAt": "Erstellt am",
     "coordinates": "Koordinaten"
+  },
+  "popup": {
+    "time": "Zeit",
+    "speed": "Geschwindigkeit",
+    "altitude": "Höhe",
+    "satellites": "Satelliten"
   },
   "gallery": {
     "backToGrid": "Zurück zur Übersicht",

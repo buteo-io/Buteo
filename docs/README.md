@@ -236,7 +236,7 @@ Find the IMEI on the device label or via SMS command `getimei`.
 
 #### 2. Configure the tracker
 
-Send SMS commands to the device (or configure via Teltonika Configurator):
+Send SMS commands to the device (or configure via Teltonika Configurator, only for Windows):
 
 ```
 setparam 2001:your-apn;2002:your-apn-user;2003:your-apn-pass;2004:your-domain.com;2005:5027;2006:0
@@ -329,7 +329,7 @@ In OwnTracks settings:
 
 #### 3. Set location publish interval
 
-OwnTracks → Settings → Location → Publish interval (e.g., "Every fix" or "5 minutes").
+OwnTracks → Settings → Location → Publish interval (e.g., "Significant" or "Move").
 
 ---
 

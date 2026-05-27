@@ -119,7 +119,7 @@ export function TripModal({ state, device, onClose, onSubmit }: Props) {
       </Field>
       <div style={{ marginBottom: "12px" }}>
         <span className="muted small" style={{ display: "block", marginBottom: "6px" }}>
-          {t("dateRange.custom") ? "Quick Presets" : "Quick Presets"}:
+          {t("dateRange.quickPresets")}:
         </span>
         <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
           <button

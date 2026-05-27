@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import maplibregl, { LngLatLike, Map as MLMap, Marker, Popup } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { api, OvernightSpot, Place, Position } from "../api";
-import { tPlaceCategory } from "../i18n";
+import { tPlaceCategory, tPopupLabel } from "../i18n";
 
 // NOTE: tiles come from openstreetmap.org. Two licensing constraints apply:
 //   1. OSM data is under ODbL -- attribution `© OpenStreetMap contributors`
@@ -364,10 +364,10 @@ export function useTrackMap(
           <div class="popup-title">${escapeHtml(name)}</div>
           ${imeiHtml}
           <table class="popup-table">
-            <tr><th>Time</th><td>${escapeHtml(time)}</td></tr>
-            <tr><th>Speed</th><td>${speed}</td></tr>
-            <tr><th>Altitude</th><td>${alt}</td></tr>
-            <tr><th>Satellites</th><td>${satellites}</td></tr>
+            <tr><th>${tPopupLabel("time")}</th><td>${escapeHtml(time)}</td></tr>
+            <tr><th>${tPopupLabel("speed")}</th><td>${speed}</td></tr>
+            <tr><th>${tPopupLabel("altitude")}</th><td>${alt}</td></tr>
+            <tr><th>${tPopupLabel("satellites")}</th><td>${satellites}</td></tr>
           </table>
         </div>
       `;
