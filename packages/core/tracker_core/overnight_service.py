@@ -53,7 +53,11 @@ async def detect_and_persist_overnights(
 
     marker = trip.overnights_last_checked_position_time
 
-    # Cooldown only for ongoing trips (closed trips: window is fixed, always safe to rescan)
+    # Closed trips: skip if marker already covers the latest position (window is fixed)
+    if trip.ended_at is not None and marker is not None and latest_trip_position_time <= marker:
+        return OvernightDetectResult(status="up_to_date", last_checked_position_time=marker)
+
+    # Ongoing trips: cooldown to avoid expensive rescans on every open
     if (
         trip.ended_at is None
         and trip.overnights_detected_at is not None

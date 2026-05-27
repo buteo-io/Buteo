@@ -553,7 +553,13 @@ async def main() -> None:  # noqa: C901
                 # cut off in the future
                 pts = [p for p in pts if p.time_id <= now]
                 print(f"  trimmed to now ({now.isoformat()}); {len(pts)} pts kept")
-            print(f"  generated {len(pts)} points")
+            if pts:
+                print(
+                    f"  generated {len(pts)} points  |  trip window: {pts[0].time_id.date()} → {pts[-1].time_id.date()}"
+                )
+            else:
+                print("  generated 0 points (skipped)")
+                continue
             n = await insert_points(device_id, pts)
             grand_total += n
     finally:
