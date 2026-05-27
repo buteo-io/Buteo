@@ -1,0 +1,277 @@
+{
+  "app": {
+    "name": "TrackMy"
+  },
+  "nav": {
+    "map": "Map",
+    "trips": "Trips",
+    "places": "Places",
+    "more": "More"
+  },
+  "trips": {
+    "title": "Trips",
+    "new": "New Trip",
+    "edit": "Edit Trip",
+    "delete": "Delete Trip",
+    "start": "Start",
+    "end": "End",
+    "noTrips": "No trips yet",
+    "active": "Active",
+    "ended": "Ended",
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "e.g. Norway summer 2025",
+      "description": "Description",
+      "descriptionPlaceholder": "Highlights, route, notes…",
+      "from": "From",
+      "to": "To",
+      "ongoing": "Ongoing — no end date yet (close it later when the trip ends)",
+      "device": "Device: {{name}}"
+    },
+    "errors": {
+      "toAfterFrom": "'To' must be after 'From'",
+      "saveFailed": "Failed to save trip",
+      "narrowWindowMediaLoss_one": "Shortening this trip will remove 1 overnight spot that has photos/videos. They will be permanently deleted. Continue?",
+      "narrowWindowMediaLoss_other": "Shortening this trip will remove {{count}} overnight spots that have photos/videos. They will be permanently deleted. Continue?"
+    }
+  },
+  "places": {
+    "title": "Places",
+    "add": "Add",
+    "create": "Create",
+    "new": "New Place",
+    "edit": "Edit Place",
+    "delete": "Delete Place",
+    "noPlaces": "No places yet",
+    "noPlacesAdd": "No places yet. Click \"+ Add\" then click on the map.",
+    "filterByTrip": "Only places linked to this trip",
+    "categories": {
+      "POI": "POI",
+      "Drinking Water": "Drinking Water",
+      "Camping": "Camping",
+      "Parking": "Parking"
+    },
+    "confirmDelete": "Delete \"{{name}}\"?",
+    "fields": {
+      "category": "Category",
+      "trips": "Trips",
+      "tripsHint": "Optional — link this place to one or more trips."
+    }
+  },
+  "devices": {
+    "title": "Devices",
+    "availableDevices": "Available Devices",
+    "noDevices": "No devices",
+    "live": "Live",
+    "history": "History",
+    "from": "From",
+    "to": "To",
+    "apply": "Apply",
+    "lastFix": "Last fix",
+    "hoursAgo": "{{hours}} hours ago",
+    "time": "Time",
+    "speed": "Speed",
+    "altitude": "Altitude",
+    "satellites": "Satellites",
+    "noFix": "No fix yet"
+  },
+  "alarms": {
+    "title": "Alarms"
+  },
+  "share": {
+    "title": "Shared",
+    "manage": "Manage",
+    "addLink": "+ Add share link",
+    "create": "Create Link",
+    "revoke": "Revoke",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "expires": "Expires",
+    "noLinks": "No share links yet. Create one to share your trips publicly.",
+    "newLink": "New link",
+    "createTripFirst": "Create trip first to share it.",
+    "linkCreatedCopied": "Share link created and copied. Save this URL now — token shown once.",
+    "linkUpdated": "Share link updated",
+    "linkDeleted": "Share link deleted",
+    "confirmDelete": "Delete this share link?",
+    "copyFailed": "Could not copy link",
+    "linkCopied": "Link copied to clipboard",
+    "paused": "Paused",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "trip": "Trip",
+    "unknown": "Unknown",
+    "delay": "Delay",
+    "blur": "Blur",
+    "places": "Places",
+    "overnights": "Overnights",
+    "name": "Name",
+    "namePlaceholder": "My shared trip",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional description for viewers",
+    "delayData": "Delay data",
+    "hours": "Hours",
+    "delayHint": "Exclude last N hours from now (default 72 = 3 days).",
+    "blurLocation": "Blur location",
+    "blurHint": "Reduce coordinate precision for privacy.",
+    "shareConnectedPlaces": "Share connected places",
+    "allPlaces": "All places",
+    "loadingPlaces": "Loading places...",
+    "noPlacesConnected": "No places connected to this trip",
+    "shareOvernightSpots": "Share overnight spots",
+    "allOvernightSpots": "All overnight spots",
+    "loadingOvernightSpots": "Loading overnight spots...",
+    "noOvernightSpots": "No overnight spots detected for this trip",
+    "active": "Enable / Disable",
+    "createLink": "Create Share Link",
+    "updateLink": "Update Share Link",
+    "errors": {
+      "duplicateName": "A share link with this name already exists."
+    }
+  },
+  "export": {
+    "title": "Export",
+    "exportHistorical": "Export historical data as GPX",
+    "selectTrip": "Select a trip",
+    "noTrips": "You haven't created a trip yet",
+    "includeMetadata": "Include tracker metadata",
+    "includeMetadataHint": "Includes altitude, speed, and satellites received from the GPS tracker.",
+    "exportButton": "Export GPX"
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "theme": "Theme",
+    "themeSystem": "System",
+    "themeLight": "Bright",
+    "themeDark": "Dark",
+    "language": "Language",
+    "account": "Account",
+    "email": "Email",
+    "changeEmail": "Change email",
+    "changePassword": "Change password"
+  },
+  "overnightSpot": {
+    "title": "Overnight Spot",
+    "arrived": "Arrived",
+    "departed": "Departed",
+    "addPhoto": "Add Photo",
+    "deletePhoto": "Delete Photo",
+    "nights_one": "1 night",
+    "nights_other": "{{count}} nights"
+  },
+  "trip": {
+    "title": "Trip",
+    "start": "Start Trip",
+    "end": "End Trip",
+    "delete": "Delete Trip",
+    "confirmDelete": "Delete this trip?"
+  },
+  "common": {
+    "save": "Save",
+    "saveChanges": "Save changes",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "yes": "Yes",
+    "no": "No",
+    "clear": "Clear",
+    "now": "now",
+    "uploading": "Uploading...",
+    "edit": "Edit",
+    "none": "None",
+    "more": "More"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "loginButton": "Sign In",
+    "loggingIn": "Signing in...",
+    "loginFailed": "Login failed",
+    "subtitle1": "Know where it is.",
+    "subtitle2": "Remember where you've been."
+  },
+  "dateRange": {
+    "all": "All",
+    "lastWeek": "Last Week",
+    "lastMonth": "Last Month",
+    "lastYear": "Last Year",
+    "custom": "Custom",
+    "today": "Today",
+    "24h": "24h",
+    "7d": "7d",
+    "quickPresets": "Quick Presets",
+    "yesterday": "Yesterday",
+    "lastWeekend": "Last Weekend"
+  },
+  "map": {
+    "colorBy": "Color by",
+    "none": "None",
+    "speed": "Speed",
+    "altitude": "Altitude",
+    "weekday": "Weekday",
+    "speedUnit": "Speed (km/h)",
+    "altitudeUnit": "Altitude (m)",
+    "dayOfWeek": "Day of week"
+  },
+  "filter": {
+    "allTrips": "All Trips",
+    "thisTrip": "This Trip"
+  },
+  "entityModal": {
+    "titleNew_place": "New Place",
+    "titleEdit_place": "Edit Place",
+    "titleNew_overnight-spot": "New Overnight Spot",
+    "titleEdit_overnight-spot": "Edit Overnight Spot",
+    "placeholderName_place": "e.g. Lake Bled overlook",
+    "placeholderName_overnight-spot": "e.g. Campsite at the lake",
+    "comments": "Comments",
+    "commentsPlaceholder": "Anything worth remembering?",
+    "media": "Photos & Videos",
+    "chooseFile": "Choose file",
+    "noFileChosen": "No file chosen"
+  },
+  "detailsModal": {
+    "title": "Position details",
+    "timestamp": "Timestamp",
+    "iso": "ISO",
+    "speed": "Speed",
+    "altitude": "Altitude",
+    "satellites": "Satellites",
+    "createdAt": "Created at",
+    "coordinates": "Coordinates"
+  },
+  "popup": {
+    "time": "Time",
+    "speed": "Speed",
+    "altitude": "Altitude",
+    "satellites": "Satellites"
+  },
+  "gallery": {
+    "backToGrid": "Back to grid",
+    "prev": "Previous",
+    "next": "Next"
+  },
+  "toasts": {
+    "placeDeleted": "Deleted \"{{name}}\"",
+    "overnightSpotsDetected_one": "Detected 1 overnight spot",
+    "overnightSpotsDetected_other": "Detected {{count}} overnight spots",
+    "cooldown": "Detection on cooldown, will retry later",
+    "raceLost": "Detection in progress, please try again",
+    "tripEnded": "Ended \"{{name}}\"",
+    "placeSaved": "Saved \"{{name}}\"",
+    "placeUpdated": "Updated \"{{name}}\"",
+    "overnightSpotUpdated": "Updated \"{{name}}\"",
+    "tripCreated": "Trip created",
+    "tripUpdated": "Trip updated"
+  }
+}
