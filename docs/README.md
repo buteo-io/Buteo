@@ -59,10 +59,10 @@ Open app at `http://localhost:5124` (or `FRONTEND_PORT` override).
 
 ```bash
 docker compose run --rm api python -m tracker_core.cli.manage create-user \
-  --email demo@example.com --password "demo-password-123"
+  --email you@example.com --password "your-secure-password"
 
 docker compose run --rm api python -m tracker_core.cli.manage create-device \
-  --email demo@example.com --imei 123456789012345 --name "Camper"
+  --email you@example.com --imei 123456789012345 --name "Camper"
 ```
 
 ### Stop Stack
@@ -106,7 +106,7 @@ docker compose up -d --build
 
 ```bash
 docker compose run --rm api python -m tracker_core.cli.manage create-user \
-  --email you@example.com --password "use-a-long-password"
+  --email you@example.com --password "your-secure-password"
 
 docker compose run --rm api python -m tracker_core.cli.manage create-device \
   --email you@example.com --imei <your-imei> --name "Van Tracker"
@@ -137,7 +137,7 @@ Seed historical trip data for existing user/device:
 
 ```bash
 docker compose run --rm api python -m tracker_core.cli.seed_demo \
-  --email demo@example.com --imei 123456789012345 --wipe
+  --email you@example.com --imei 123456789012345 --wipe
 ```
 
 What this does:
@@ -151,7 +151,7 @@ Example without OSRM:
 
 ```bash
 docker compose run --rm api python -m tracker_core.cli.seed_demo \
-  --email demo@example.com --imei 123456789012345 --wipe --no-osrm
+  --email you@example.com --imei 123456789012345 --wipe --no-osrm
 ```
 
 ## Live Dummy Data
@@ -183,12 +183,12 @@ Run commands either:
 | Command | Purpose | Example |
 |---|---|---|
 | `init-db` | Run Alembic migrations to latest | `python -m tracker_core.cli.manage init-db` |
-| `create-user --email --password` | Create user (password min 12 chars) | `python -m tracker_core.cli.manage create-user --email demo@example.com --password "demo-password-123"` |
-| `reset-password --email --password` | Reset password, invalidate sessions | `python -m tracker_core.cli.manage reset-password --email demo@example.com --password "new-password-123"` |
-| `create-device --email --imei --name` | Register tracker device for user | `python -m tracker_core.cli.manage create-device --email demo@example.com --imei 123456789012345 --name "Camper"` |
+| `create-user --email --password` | Create user (password min 12 chars) | `python -m tracker_core.cli.manage create-user --email you@example.com --password "your-secure-password"` |
+| `reset-password --email --password` | Reset password, invalidate sessions | `python -m tracker_core.cli.manage reset-password --email you@example.com --password "your-secure-password"` |
+| `create-device --email --imei --name` | Register tracker device for user | `python -m tracker_core.cli.manage create-device --email you@example.com --imei 123456789012345 --name "Camper"` |
 | `revoke-device --imei` | Revoke device; ingest rejects new fixes | `python -m tracker_core.cli.manage revoke-device --imei 123456789012345` |
-| `deactivate-user --email` | Disable login for user | `python -m tracker_core.cli.manage deactivate-user --email demo@example.com` |
-| `activate-user --email` | Re-enable login | `python -m tracker_core.cli.manage activate-user --email demo@example.com` |
+| `deactivate-user --email` | Disable login for user | `python -m tracker_core.cli.manage deactivate-user --email you@example.com` |
+| `activate-user --email` | Re-enable login | `python -m tracker_core.cli.manage activate-user --email you@example.com` |
 | `list-users` | List users | `python -m tracker_core.cli.manage list-users` |
 | `list-devices` | List devices | `python -m tracker_core.cli.manage list-devices` |
 
@@ -196,7 +196,7 @@ Run commands either:
 
 | Command | Purpose | Example |
 |---|---|---|
-| `--email --imei [--wipe] [--seed] [--no-osrm]` | Seed realistic historical trip points for one device | `python -m tracker_core.cli.seed_demo --email demo@example.com --imei 123456789012345 --wipe` |
+| `--email --imei [--wipe] [--seed] [--no-osrm]` | Seed realistic historical trip points for one device | `python -m tracker_core.cli.seed_demo --email you@example.com --imei 123456789012345 --wipe` |
 
 ## REST API Docs
 

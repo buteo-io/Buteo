@@ -40,8 +40,8 @@ Buteo uses a monorepo structure:
 
 4. **Initialize development user & tracker:**
    ```bash
-   docker compose run --rm api python -m tracker_core.cli.manage create-user --email dev@example.com --password "dev-password"
-   docker compose run --rm api python -m tracker_core.cli.manage create-device --email dev@example.com --imei 123456789012345 --name "Dev Tracker"
+   docker compose run --rm api python -m tracker_core.cli.manage create-user --email you@example.com --password "your-secure-password"
+   docker compose run --rm api python -m tracker_core.cli.manage create-device --email you@example.com --imei 123456789012345 --name "Dev Tracker"
    ```
 
 ---

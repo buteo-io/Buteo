@@ -100,7 +100,7 @@ Since TrackMy does not open a public registration endpoint for security, your fi
 ### Step 1: Create Admin User Account
 ```bash
 docker compose run --rm api python -m tracker_core.cli.manage create-user \
-  --email you@example.com --password "SecureAndUniquePassword123"
+  --email you@example.com --password "your-secure-password"
 ```
 *(Passwords must be at least 12 characters long.)*
 
@@ -166,6 +166,6 @@ docker compose logs -f ingest
 If an administrator is locked out, reset their credentials using the CLI tool:
 ```bash
 docker compose run --rm api python -m tracker_core.cli.manage reset-password \
-  --email you@example.com --password "NewExcellentPassword999"
+  --email you@example.com --password "your-secure-password"
 ```
 This action automatically invalidates all active sessions by rotating the user's secret token version.
