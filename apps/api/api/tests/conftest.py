@@ -94,7 +94,7 @@ async def _provision(email: str, password: str = "pw1234abcd!!") -> Account:
     # 3. Create local User and Device inside the dynamic tenant database
     imei = _unique_imei()
     async with tenant_db_manager.get_tenant_session(tenant_id) as s:
-        u = User(email=email, password_hash=hash_password(password))
+        u = User(email=email)
         s.add(u)
         await s.flush()
         ent = Entity(user_id=u.id, type="vehicle", name="Campervan")

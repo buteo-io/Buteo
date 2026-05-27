@@ -62,7 +62,7 @@ async def _provision_no_underscores(
 
     imei = _unique_imei()
     async with tenant_db_manager.get_tenant_session(tenant_id) as s:
-        u = User(email=email, password_hash=hash_password(password))
+        u = User(email=email)
         s.add(u)
         await s.flush()
         ent = Entity(user_id=u.id, type="vehicle", name="Campervan")
@@ -411,4 +411,3 @@ async def test_share_link_unique_names(
         },
     )
     assert res5.status_code == 200, res5.text
-

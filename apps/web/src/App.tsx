@@ -498,8 +498,19 @@ export default function App() {
               }
             }}
             onDelete={async (id) => {
-              await api.deleteTrip(id);
-              void refreshTrips();
+              try {
+                await api.deleteTrip(id);
+                if (selectedTripId === id) {
+                  setSelectedTripId(null);
+                  setPlacesFilterByTrip(false);
+                  setHistoryPts([]);
+                  map.current?.setOvernightSpots([]);
+                  map.current?.clearHistory();
+                }
+                void refreshTrips();
+              } catch (e: any) {
+                setErr(e.message);
+              }
             }}
             onEnd={async (tTrip) => {
               try {

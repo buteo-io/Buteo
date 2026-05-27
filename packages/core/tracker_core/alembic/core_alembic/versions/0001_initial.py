@@ -53,7 +53,6 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer, primary_key=True),
         _public_id_col(),
         sa.Column("email", sa.String(255), nullable=False, unique=True),
-        sa.Column("password_hash", sa.String(255), nullable=False),
         sa.Column("is_active", sa.Boolean, nullable=False, server_default=sa.text("1")),
         sa.Column("token_version", sa.Integer, nullable=False, server_default=sa.text("0")),
         *_ts_cols(),
@@ -402,7 +401,6 @@ def downgrade() -> None:
         "places",
         "positions",
         "devices",
-        "tags",
         "entities",
         "users",
     ):

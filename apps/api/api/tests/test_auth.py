@@ -47,7 +47,7 @@ async def client():
     async with tenant_db_manager.get_tenant_session(tenant_id) as s:
         await s.execute(delete(User).where(User.email == "test@example.com"))
         s.add(
-            User(email="test@example.com", password_hash=hash_password("pw1234abcd!!")),
+            User(email="test@example.com"),
         )
         await s.commit()
 

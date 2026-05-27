@@ -272,6 +272,95 @@ async def test_trip_deletion_cleans_media_files(
 
     assert not media_dir.exists()
 
+    async with SessionLocal() as s:
+        spot_in_db = (
+            await s.execute(
+                select(OvernightSpot).where(OvernightSpot.public_id == spot_public_id)
+            )
+        ).scalar_one_or_none()
+        assert spot_in_db is None
+
+
+@pytest.mark.asyncio
+async def test_trip_update_time_range_deletes_spots_and_cleans_media(
+    authed: httpx.AsyncClient,
+    account: Account,
+    tmp_path,
+    monkeypatch,
+):
+    from sqlalchemy import select
+    from tracker_core.internal.appctx.config import AppConfig
+    from tracker_core.store.models import OvernightSpot
+    from tracker_core.store.models import Trip as TripModel
+
+    monkeypatch.setattr(AppConfig, "data_dir", str(tmp_path))
+
+    start = datetime.now(timezone.utc) - timedelta(days=10)
+    end = start + timedelta(hours=5)
+    r = await authed.post(
+        "/trips",
+        json=_trip_payload(str(account.device_pid), start, end),
+    )
+    assert r.status_code == 200
+    trip = r.json()
+    trip_id = trip["id"]
+
+    recent_stay = datetime.now(timezone.utc) - timedelta(hours=10)
+    async with SessionLocal() as s:
+        trip_db = (
+            await s.execute(select(TripModel).where(TripModel.public_id == trip_id))
+        ).scalar_one()
+        trip_db.overnights_detected_at = datetime.now(timezone.utc)
+        trip_db.overnights_last_checked_position_time = end
+        spot = OvernightSpot(
+            user_id=account.user_id,
+            trip_id=trip_db.id,
+            name="Spot to delete",
+            lon=13.0,
+            lat=52.0,
+            nights_count=1,
+            last_stay_at=recent_stay,
+        )
+        s.add(spot)
+        await s.commit()
+        await s.refresh(spot)
+        spot_public_id = spot.public_id
+
+    png_content = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+    files = {"file": ("recent.png", png_content, "image/png")}
+    r_upload = await authed.post(
+        f"/overnight-spots/{spot_public_id}/media", files=files
+    )
+    assert r_upload.status_code == 200
+
+    media_dir = tmp_path / "uploads" / str(account.user_id) / str(spot_public_id)
+    assert media_dir.exists()
+    assert media_dir.is_dir()
+    assert list(media_dir.glob("*"))
+
+    new_start = start + timedelta(hours=1)
+    r_patch = await authed.patch(
+        f"/trips/{trip_id}",
+        json={"started_at": new_start.isoformat()},
+    )
+    assert r_patch.status_code == 200
+
+    assert not media_dir.exists()
+
+    async with SessionLocal() as s:
+        spot_in_db = (
+            await s.execute(
+                select(OvernightSpot).where(OvernightSpot.public_id == spot_public_id)
+            )
+        ).scalar_one_or_none()
+        assert spot_in_db is None
+
+        trip_updated = (
+            await s.execute(select(TripModel).where(TripModel.public_id == trip_id))
+        ).scalar_one()
+        assert trip_updated.overnights_detected_at is None
+        assert trip_updated.overnights_last_checked_position_time is None
+
 
 @pytest.mark.asyncio
 async def test_trip_gpx_export(authed: httpx.AsyncClient, account: Account):
@@ -284,7 +373,7 @@ async def test_trip_gpx_export(authed: httpx.AsyncClient, account: Account):
                 time_id=start,
                 lon=13.0,
                 lat=52.0,
-                speed=36.0, # 36 km/h = 10 m/s
+                speed=36.0,  # 36 km/h = 10 m/s
                 altitude=450.0,
                 satellites=12,
             )
@@ -294,7 +383,9 @@ async def test_trip_gpx_export(authed: httpx.AsyncClient, account: Account):
     # Create a trip
     r = await authed.post(
         "/trips",
-        json=_trip_payload(str(account.device_pid), start, start + timedelta(minutes=5)),
+        json=_trip_payload(
+            str(account.device_pid), start, start + timedelta(minutes=5)
+        ),
     )
     assert r.status_code == 200
     trip_id = r.json()["id"]
@@ -324,4 +415,3 @@ async def test_trip_gpx_export(authed: httpx.AsyncClient, account: Account):
     assert "time_id,lat,lon,altitude,speed_kmh,satellites" in csv_text
     assert "52.0,13.0" in csv_text
     assert "450.0" in csv_text
-
