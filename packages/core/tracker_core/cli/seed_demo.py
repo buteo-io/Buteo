@@ -40,81 +40,100 @@ DRESDEN = (51.0504, 13.7373)
 
 ROUTES: dict[str, dict[str, list[tuple[float, float]]]] = {
     "stockholm": {
-        # Dresden -> Berlin -> Rostock -> Trelleborg ferry -> Jönköping -> Stockholm
+        # Dresden -> Berlin -> Magdeburg -> Rostock -> Trelleborg ferry -> Malmö -> Jönköping -> Stockholm
         "out": [
             DRESDEN,
             (52.5200, 13.4050),  # Berlin
+            (52.1205, 11.6276),  # Magdeburg
             (54.0833, 12.1333),  # Rostock
             (55.3753, 13.1569),  # Trelleborg
+            (55.6050, 13.0038),  # Malmö
             (57.7826, 14.1618),  # Jönköping
             (59.3293, 18.0686),  # Stockholm
         ],
-        # Stockholm -> Malmö -> Copenhagen -> Hamburg -> Dresden
+        # Stockholm -> Uppsala -> Copenhagen -> Hamburg -> Hanover -> Dresden
         "back": [
             (59.3293, 18.0686),
-            (55.6050, 13.0038),  # Malmö
+            (59.8586, 17.6389),  # Uppsala
             (55.6761, 12.5683),  # Copenhagen
             (53.5511, 9.9937),  # Hamburg
+            (52.3759, 9.7320),  # Hanover
             DRESDEN,
         ],
     },
     "barcelona": {
-        # Dresden -> Nürnberg -> Stuttgart -> Lyon -> Montpellier -> Barcelona
+        # Dresden -> Leipzig -> Nürnberg -> Stuttgart -> Strasbourg -> Lyon -> Nîmes -> Barcelona
         "out": [
             DRESDEN,
+            (51.3397, 12.3731),  # Leipzig
             (49.4521, 11.0767),  # Nürnberg
             (48.7758, 9.1829),  # Stuttgart
+            (48.5734, 7.7521),  # Strasbourg
             (45.7640, 4.8357),  # Lyon
-            (43.6109, 3.8772),  # Montpellier
+            (43.8387, 4.3601),  # Nîmes
             (41.3851, 2.1734),  # Barcelona
         ],
-        # Barcelona -> Marseille -> Genoa -> Milan -> Munich -> Dresden
+        # Barcelona -> Perpignan -> Marseille -> Turin -> Milan -> Innsbruck -> Munich -> Dresden
         "back": [
             (41.3851, 2.1734),
+            (42.6980, 2.8956),  # Perpignan
             (43.2965, 5.3698),  # Marseille
-            (44.4056, 8.9463),  # Genoa
+            (45.0703, 7.6869),  # Turin
             (45.4642, 9.1900),  # Milan
+            (47.2692, 11.4041),  # Innsbruck
             (48.1351, 11.5820),  # Munich
             DRESDEN,
         ],
     },
     "albania": {
-        # Dresden -> Prague -> Bratislava -> Budapest -> Belgrade -> Skopje -> Tirana
+        # Dresden -> Leipzig -> Prague -> Bratislava -> Budapest -> Subotica -> Belgrade -> Niš -> Skopje -> Tirana
         "out": [
             DRESDEN,
+            (51.3397, 12.3731),  # Leipzig
             (50.0755, 14.4378),  # Prague
             (48.1486, 17.1077),  # Bratislava
             (47.4979, 19.0402),  # Budapest
+            (46.1000, 19.6500),  # Subotica
             (44.7866, 20.4489),  # Belgrade
+            (43.3209, 21.8954),  # Niš
             (41.9981, 21.4254),  # Skopje
             (41.3275, 19.8189),  # Tirana
         ],
-        # Tirana -> Dubrovnik -> Split -> Ljubljana -> Vienna -> Prague -> Dresden
+        # Tirana -> Podgorica -> Dubrovnik -> Split -> Zadar -> Ljubljana -> Salzburg -> Vienna -> Prague -> Dresden
         "back": [
             (41.3275, 19.8189),
+            (42.4304, 19.2594),  # Podgorica
             (42.6507, 18.0944),  # Dubrovnik
             (43.5081, 16.4402),  # Split
+            (44.1194, 15.2319),  # Zadar
             (46.0569, 14.5058),  # Ljubljana
+            (47.8095, 13.0550),  # Salzburg
             (48.2082, 16.3738),  # Vienna
             (50.0755, 14.4378),  # Prague
             DRESDEN,
         ],
     },
     "toulouse": {
-        # Dresden -> Frankfurt -> Strasbourg -> Lyon -> Toulouse
+        # Dresden -> Leipzig -> Frankfurt -> Mannheim -> Strasbourg -> Lyon -> Carcassonne -> Toulouse
         "out": [
             DRESDEN,
+            (51.3397, 12.3731),  # Leipzig
             (50.1109, 8.6821),  # Frankfurt
+            (49.4875, 8.4660),  # Mannheim
             (48.5734, 7.7521),  # Strasbourg
             (45.7640, 4.8357),  # Lyon
+            (43.2130, 2.3500),  # Carcassonne
             (43.6047, 1.4442),  # Toulouse
         ],
-        # Toulouse -> Bordeaux -> Paris -> Brussels -> Cologne -> Dresden
+        # Toulouse -> Bordeaux -> La Rochelle -> Nantes -> Rennes -> Paris -> Reims -> Cologne -> Dresden
         "back": [
             (43.6047, 1.4442),
             (44.8378, -0.5792),  # Bordeaux
+            (46.1600, -1.1500),  # La Rochelle
+            (47.2184, -1.5526),  # Nantes
+            (48.1173, -1.6778),  # Rennes
             (48.8566, 2.3522),  # Paris
-            (50.8503, 4.3517),  # Brussels
+            (49.2583, 4.0311),  # Reims
             (50.9375, 6.9603),  # Cologne
             DRESDEN,
         ],
@@ -154,6 +173,50 @@ def lerp(a: float, b: float, t: float) -> float:
 
 def jitter(scale_deg: float = 0.0008) -> float:
     return random.gauss(0.0, scale_deg)
+
+
+def jitter_within_circle(at: tuple[float, float], radius_meters: float = 20.0) -> tuple[float, float]:
+    r = math.sqrt(random.uniform(0, 1)) * radius_meters
+    theta = random.uniform(0, 2 * math.pi)
+    dy = r * math.sin(theta)
+    dx = r * math.cos(theta)
+    lat = at[0] + (dy / 111000.0)
+    lon = at[1] + (dx / (111000.0 * math.cos(math.radians(at[0]))))
+    return lat, lon
+
+
+def split_polyline_into_days(coords: list[tuple[float, float]]) -> list[list[tuple[float, float]]]:
+    if not coords or len(coords) < 2:
+        return [coords] if coords else []
+    coords_copy = list(coords)
+    days: list[list[tuple[float, float]]] = []
+    current_day_coords: list[tuple[float, float]] = [coords_copy[0]]
+    current_day_km = 0.0
+    max_day_km = random.randint(150, 250)
+    i = 0
+    while i < len(coords_copy) - 1:
+        p1 = coords_copy[i]
+        p2 = coords_copy[i + 1]
+        d = haversine_km(p1, p2)
+        if current_day_km + d <= max_day_km:
+            current_day_coords.append(p2)
+            current_day_km += d
+            i += 1
+        else:
+            needed = max_day_km - current_day_km
+            u = needed / (d or 1e-9)
+            split_lat = lerp(p1[0], p2[0], u)
+            split_lon = lerp(p1[1], p2[1], u)
+            split_p = (split_lat, split_lon)
+            current_day_coords.append(split_p)
+            days.append(current_day_coords)
+            current_day_coords = [split_p]
+            current_day_km = 0.0
+            max_day_km = random.randint(150, 250)
+            coords_copy[i] = split_p
+    if len(current_day_coords) > 1:
+        days.append(current_day_coords)
+    return days
 
 
 # --- generators ------------------------------------------------------------
@@ -222,17 +285,18 @@ async def gen_drive_leg(
     b: tuple[float, float],
     avg_kmh: float = 85.0,
     sample_s: int = 60,
+    poly: list[tuple[float, float]] | None = None,
 ) -> list[GenPoint]:
     """Drive from a to b along OSRM-routed roads (or straight line on failure).
 
     Real device-like cadence: sample every `sample_s` seconds with realistic
     speed profile (ramp up / cruise / ramp down + noise).
     """
-    poly: list[tuple[float, float]] | None = None
-    if client is not None:
-        poly = await osrm_route(client, a, b)
-    if not poly or len(poly) < 2:
-        poly = [a, b]
+    if poly is None:
+        if client is not None:
+            poly = await osrm_route(client, a, b)
+        if not poly or len(poly) < 2:
+            poly = [a, b]
 
     # actual road distance from polyline
     seg_total = sum(haversine_km(poly[i], poly[i + 1]) for i in range(len(poly) - 1))
@@ -276,11 +340,12 @@ def gen_overnight(
     n = int(hours * samples_per_hour)
     for i in range(n):
         ts = start_ts + timedelta(hours=i / samples_per_hour)
+        lat, lon = jitter_within_circle(at, radius_meters=20.0)
         out.append(
             GenPoint(
                 time_id=ts,
-                lat=at[0] + jitter(0.00005),
-                lon=at[1] + jitter(0.00005),
+                lat=lat,
+                lon=lon,
                 speed=0.0,
                 altitude=80.0,
                 satellites=random.randint(6, 10),
@@ -299,20 +364,58 @@ async def gen_round_trip(
     cur = start_dt
     for direction in ("out", "back"):
         wps = route[direction]
+        full_poly = []
         for i in range(len(wps) - 1):
-            leg = await gen_drive_leg(client, cur, wps[i], wps[i + 1])
+            poly = None
+            if client is not None:
+                poly = await osrm_route(client, wps[i], wps[i + 1])
+            if not poly or len(poly) < 2:
+                poly = [wps[i], wps[i + 1]]
+
+            if not full_poly:
+                full_poly.extend(poly)
+            else:
+                full_poly.extend(poly[1:])
+
+        day_polys = split_polyline_into_days(full_poly)
+        for day_idx, day_poly in enumerate(day_polys):
+            leg = await gen_drive_leg(client, cur, day_poly[0], day_poly[-1], poly=day_poly)
             pts.extend(leg)
             cur = leg[-1].time_id
+
             # overnight at every intermediate stop (incl. destination between out and back)
-            is_last_leg_of_round = direction == "back" and i == len(wps) - 2
-            if not is_last_leg_of_round:
-                stay_hours = 11.0 + random.uniform(-1, 1)
-                # at destination (between out and back), longer stay (multi-day)
-                if direction == "out" and i == len(wps) - 2:
-                    stay_hours += 24.0 * random.randint(2, 5)
-                ov = gen_overnight(cur, wps[i + 1], hours=stay_hours)
+            is_last_day_of_direction = day_idx == len(day_polys) - 1
+            is_last_day_of_round_trip = (direction == "back") and is_last_day_of_direction
+
+            if not is_last_day_of_round_trip:
+                if direction == "out" and is_last_day_of_direction:
+                    # main destination stay: 4 to 8 nights
+                    num_nights = random.randint(4, 8)
+                else:
+                    # intermediate stops: 1 to 3 nights
+                    # 45% chance 1 night, 40% chance 2 nights, 15% chance 3 nights
+                    r = random.random()
+                    if r < 0.45:
+                        num_nights = 1
+                    elif r < 0.85:
+                        num_nights = 2
+                    else:
+                        num_nights = 3
+
+                departure_jitter_mins = random.randint(-30, 30)
+                next_departure = datetime.combine(
+                    cur.date() + timedelta(days=num_nights),
+                    time(9, 0),
+                    tzinfo=timezone.utc,
+                ) + timedelta(minutes=departure_jitter_mins)
+                stay_hours = (next_departure - cur).total_seconds() / 3600.0
+                if stay_hours < 1.0:
+                    stay_hours = 11.0 + random.uniform(-1, 1)
+                    next_departure = cur + timedelta(hours=stay_hours)
+
+                ov = gen_overnight(cur, day_poly[-1], hours=stay_hours)
                 pts.extend(ov)
-                cur = ov[-1].time_id + timedelta(minutes=30)
+                cur = next_departure
     return pts
 
 
