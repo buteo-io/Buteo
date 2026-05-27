@@ -125,6 +125,7 @@ export type OvernightSpot = {
   lon: number;
   lat: number;
   nights_count: number;
+  last_stay_at?: string;
   created_at?: string;
   // media attached to this overnight spot
   media?: OvernightSpotMedia[];

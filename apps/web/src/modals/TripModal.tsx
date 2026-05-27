@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Device, Trip } from "../api";
+import { Device, OvernightSpot, Trip } from "../api";
 import { Field, Modal } from "../components/Modal";
 import { toLocalInput } from "../utils/time";
 
@@ -12,11 +12,12 @@ export type TripModalState =
 type Props = {
   state: TripModalState;
   device: Device | null;
+  overnightSpots: OvernightSpot[];
   onClose: () => void;
   onSubmit: (body: Omit<Trip, "id">, id?: string) => Promise<void> | void;
 };
 
-export function TripModal({ state, device, onClose, onSubmit }: Props) {
+export function TripModal({ state, device, overnightSpots, onClose, onSubmit }: Props) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -65,6 +66,27 @@ export function TripModal({ state, device, onClose, onSubmit }: Props) {
         return;
       }
       endedAt = toIso;
+    }
+    // Warn if narrowing the window would remove spots that have media
+    if (state && state.mode === "edit") {
+      const origStart = new Date(state.trip.started_at);
+      const origEnd = state.trip.ended_at ? new Date(state.trip.ended_at) : null;
+      const newStart = new Date(fromIso);
+      const newEnd = endedAt ? new Date(endedAt) : null;
+      const isNarrower =
+        newStart > origStart || (origEnd === null && newEnd !== null) || (origEnd !== null && newEnd !== null && newEnd < origEnd);
+      if (isNarrower) {
+        const spotsWithMediaOutside = overnightSpots.filter((s) => {
+          if (!s.media || s.media.length === 0) return false;
+          const stayAt = s.last_stay_at ? new Date(s.last_stay_at) : null;
+          if (!stayAt) return false;
+          return stayAt < newStart || (newEnd !== null && stayAt > newEnd);
+        });
+        if (spotsWithMediaOutside.length > 0) {
+          const ok = window.confirm(t("trips.errors.narrowWindowMediaLoss", { count: spotsWithMediaOutside.length }));
+          if (!ok) return;
+        }
+      }
     }
     setSaving(true);
     setSubmitError(null);

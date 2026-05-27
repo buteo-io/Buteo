@@ -205,6 +205,8 @@ async def update_trip(
         t.started_at = new_started
     if "ended_at" in fields:
         t.ended_at = new_ended
+    if "started_at" in fields or "ended_at" in fields:
+        t.overnights_last_checked_position_time = None
     await _commit_or_409_ongoing(db)
     await db.refresh(t)
     logger.info(

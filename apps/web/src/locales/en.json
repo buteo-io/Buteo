@@ -30,7 +30,9 @@
     },
     "errors": {
       "toAfterFrom": "'To' must be after 'From'",
-      "saveFailed": "Failed to save trip"
+      "saveFailed": "Failed to save trip",
+      "narrowWindowMediaLoss_one": "Shortening this trip will remove 1 overnight spot that has photos/videos. They will be permanently deleted. Continue?",
+      "narrowWindowMediaLoss_other": "Shortening this trip will remove {{count}} overnight spots that have photos/videos. They will be permanently deleted. Continue?"
     }
   },
   "places": {

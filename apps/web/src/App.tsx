@@ -86,6 +86,7 @@ export default function App() {
   const [galleryMedia, setGalleryMedia] = useState<import("./api").MediaItem[] | null>(null);
   const [galleryIdx, setGalleryIdx] = useState<number | null>(null);
   const [tripModal, setTripModal] = useState<TripModalState>(null);
+  const [tripModalOvernightSpots, setTripModalOvernightSpots] = useState<OvernightSpot[]>([]);
   const [overnightSpotModal, setOvernightSpotModal] = useState<OvernightSpotModalState>(null);
   const [detailsModal, setDetailsModal] = useState<EntityDetailsModalState>(null);
   // Selected trip drives the optional "only places linked to this trip"
@@ -521,7 +522,14 @@ export default function App() {
                 setErr(e.message);
               }
             }}
-            onEdit={(t) => setTripModal({ mode: "edit", trip: t })}
+            onEdit={async (t) => {
+              setTripModalOvernightSpots([]);
+              setTripModal({ mode: "edit", trip: t });
+              try {
+                const spots = await api.tripOvernightSpots(t.id);
+                setTripModalOvernightSpots(spots);
+              } catch (_) {}
+            }}
             onDownload={onDownloadTrip}
             onShare={(trip, shareLinkId) => {
               if (shareLinkId) {
@@ -865,6 +873,7 @@ export default function App() {
       <TripModal
         state={tripModal}
         device={device}
+        overnightSpots={tripModalOvernightSpots}
         onClose={() => setTripModal(null)}
         onSubmit={async (body, id) => {
           if (id == null) {

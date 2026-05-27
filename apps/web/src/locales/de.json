@@ -30,7 +30,9 @@
     },
     "errors": {
       "toAfterFrom": "'Bis' muss nach 'Von' liegen",
-      "saveFailed": "Reise konnte nicht gespeichert werden"
+      "saveFailed": "Reise konnte nicht gespeichert werden",
+      "narrowWindowMediaLoss_one": "Das Kürzen der Reise entfernt 1 Übernachtungsort mit Fotos/Videos. Diese werden unwiderruflich gelöscht. Fortfahren?",
+      "narrowWindowMediaLoss_other": "Das Kürzen der Reise entfernt {{count}} Übernachtungsorte mit Fotos/Videos. Diese werden unwiderruflich gelöscht. Fortfahren?"
     }
   },
   "places": {
