@@ -1,0 +1,178 @@
+services:
+  db:
+    profiles: [postgres]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tracker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-tracker}
+    ports:
+      # Bound to loopback only — never internet-exposed. Lets host-mode dev
+      # (uvicorn run directly on the host) reach the DB at localhost:55432.
+      # In prod on a single host this is also safe; remove if your DB lives
+      # elsewhere or you don't want any host binding.
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - tracker_db:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-tracker} -d ${POSTGRES_DB:-tracker}",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: deployments/docker/Dockerfile.api
+    environment:
+      DATA_DIR: /data
+      JWT_SECRET:
+        ${JWT_SECRET:?JWT_SECRET must be set in .env (use `openssl rand -hex
+        32`)}
+      JWT_EXPIRE_MIN: ${JWT_EXPIRE_MIN:-1440}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://${DOMAIN},https://${API_DOMAIN:-api.${DOMAIN}}}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-true}
+      DEV_INSECURE_COOKIES: ${DEV_INSECURE_COOKIES:-false}
+      # Disable /docs, /redoc and /openapi.json in prod to avoid advertising
+      # the route surface. Override to true when you need to inspect them.
+      DOCS_ENABLED: ${DOCS_ENABLED:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ${DATA_DIR:-./data}:/data
+    ports:
+      # Host port for local dev (Vite proxy). Bound to loopback only.
+      - "127.0.0.1:8765:8765"
+    networks:
+      - internal
+      - proxy
+    # enable labels for production
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.tracker-api.rule=Host(`${API_DOMAIN:-api.${DOMAIN\
+        }}`)"
+      - "traefik.http.routers.tracker-api.entrypoints=websecure"
+      - "traefik.http.routers.tracker-api.tls=true"
+      - "traefik.http.routers.tracker-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.tracker-api.loadbalancer.server.port=8765"
+
+  ingest:
+    build:
+      context: .
+      dockerfile: deployments/docker/Dockerfile.ingest
+    command: ["python", "-m", "ingest.ingest"]
+    environment:
+      DATA_DIR: /data
+      JWT_SECRET: ${JWT_SECRET}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ${DATA_DIR:-./data}:/data
+    ports:
+      # Codec 8 TCP (Teltonika FMC920). Bind to localhost; port-forward to expose.
+      - "${INGEST_CODEC8_PORT:-5027}:${INGEST_CODEC8_PORT:-5027}"
+      # OsmAnd / Traccar Client HTTP. Bind to localhost; reverse-proxy or VPN for external access.
+      - "${INGEST_OSMAND_PORT:-8766}:${INGEST_OSMAND_PORT:-8766}"
+    networks:
+      - internal
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.tracker-ingest.rule=Host(`${DOMAIN}`) && (PathPrefix(`/traccar_client`) || PathPrefix(`/owntracks`))"
+      - "traefik.http.routers.tracker-ingest.entrypoints=websecure"
+      - "traefik.http.routers.tracker-ingest.tls=true"
+      - "traefik.http.routers.tracker-ingest.tls.certresolver=letsencrypt"
+      - "traefik.http.services.tracker-ingest.loadbalancer.server.port=8766"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: deployments/docker/Dockerfile.web
+    environment:
+      API_UPSTREAM: ${API_UPSTREAM:-api:8765}
+    ports:
+      # Host port for local dev. Access at http://localhost:8080
+      - "${FRONTEND_PORT:-5124}:80"
+    depends_on:
+      - api
+    networks:
+      - internal
+      - proxy
+    # enable labels for production
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.tracker.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.tracker.entrypoints=websecure"
+      - "traefik.http.routers.tracker.tls=true"
+      - "traefik.http.routers.tracker.tls.certresolver=letsencrypt"
+      - "traefik.http.services.tracker.loadbalancer.server.port=80"
+      # --- security headers middleware ---------------------------------------
+      # HSTS (1 year, includeSubdomains, preload-eligible).
+      - "traefik.http.middlewares.tracker-sec.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.tracker-sec.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.tracker-sec.headers.stsPreload=true"
+      - "traefik.http.middlewares.tracker-sec.headers.forceSTSHeader=true"
+      # Clickjacking + sniffing + cross-domain policy.
+      - "traefik.http.middlewares.tracker-sec.headers.frameDeny=true"
+      - "traefik.http.middlewares.tracker-sec.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.tracker-sec.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.tracker-sec.headers.referrerPolicy=strict-ori\
+        gin-when-cross-origin"
+      - "traefik.http.middlewares.tracker-sec.headers.permissionsPolicy=geoloca\
+        tion=(), microphone=(), camera=()"
+      # Conservative CSP: own origin + map tiles + Google Fonts. Tighten if
+      # you swap providers. unsafe-inline on style is needed by MapLibre /
+      # injected Vite styles.
+      - "traefik.http.middlewares.tracker-sec.headers.contentSecurityPolicy=def\
+        ault-src 'self'; img-src 'self' data: blob: https:; style-src 'self'
+        'unsafe-inline' https://fonts.googleapis.com; font-src 'self'
+        https://fonts.gstatic.com; script-src 'self'; connect-src 'self' https:
+        wss:; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self';
+        form-action 'self'"
+      - "traefik.http.routers.tracker.middlewares=tracker-sec@docker"
+
+  mock-tracker:
+    profiles: ["mock"]
+    build:
+      context: .
+      dockerfile: deployments/docker/Dockerfile.ingest
+    environment:
+      DATA_DIR: /data
+      PYTHONPATH: /app/apps/ingest
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+    working_dir: /app
+    command:
+      [
+        "python",
+        "/scripts/mock_tracker.py",
+        "--host",
+        "${INGEST_HOST:-ingest}",
+        "--port",
+        "${INGEST_CODEC8_PORT:-5027}",
+        "--imei",
+        "${MOCK_IMEI:-123456789012345}",
+        "--interval",
+        "2",
+      ]
+    volumes:
+      - ./scripts:/scripts:ro
+    depends_on:
+      - ingest
+    networks:
+      - internal
+
+volumes:
+  tracker_db:
+
+networks:
+  internal:
+    driver: bridge
+  proxy:
+    external: true
