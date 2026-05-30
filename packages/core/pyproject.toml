@@ -1,0 +1,164 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tracker-core"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "sqlalchemy>=2.0",
+  "asyncpg>=0.29",
+  "greenlet>=3.0",
+  "pydantic[email]>=2.6",
+  "pydantic-settings>=2.2",
+  "bcrypt>=4.1",
+  "python-jose[cryptography]>=3.3",
+  "click>=8.1",
+  "alembic>=1.13",
+  "structlog>=24",
+  "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "pytest-asyncio>=0.23",
+  "ruff>=0.6",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tracker_core*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  # Assertions are fine (and used in tests).
+  "S101",
+  # Mutable class attrs — SQLAlchemy Mapped columns look like this.
+  "RUF012",
+  # Sometimes nested ifs read better than combined ones.
+  "SIM102",
+  # Project uses Google-style docstrings with "Returns:" sections; D203/D213 conflict with D211/D212.
+  "D203",
+  "D213",
+  # We don't require docstrings on every dunder / private helper, or on tiny
+  # `__init__.py` package markers, or on small pure-helper functions whose
+  # purpose is obvious from the name + signature.
+  "D104",
+  "D105",
+  "D107",
+  "D103",
+  # Pydantic wire shapes are self-documenting from typed fields + the endpoint
+  # docstring that references them. Skip class-level docstrings for them.
+  "D101",
+  "D106",
+  # "Missing docstring in public method" — Pydantic validators and pure wire
+  # shapes don't need per-method prose.
+  "D102",
+  # FastAPI + SQLAlchemy rely heavily on call-site defaults (Depends, Field, Query) which would
+  # otherwise violate B008. Safe in this codebase.
+  "B008",
+  # We allow `from __future__ import annotations`; FA100/FA102 false-positives on it.
+  "FA102",
+  # Commented-out code rule is too aggressive for the TODO comments we keep.
+  "ERA001",
+  # TODO markers are allowed.
+  "FIX002",
+  "TD002",
+  "TD003",
+  # "Too many arguments" is noisy on FastAPI endpoints that take Depends + query params.
+  "PLR0913",
+  # Magic-value comparisons are readable enough in route handlers / tests.
+  "PLR2004",
+  # Blind exception rules — we catch broadly in ingest on purpose.
+  "BLE001",
+  # FastAPI `Annotated[...]` style is valid but we use the legacy default-value
+  # style consistently. Migrating is a whole-codebase refactor.
+  "FAST002",
+  # `response_model=` on endpoints is redundant with a typed return, but we keep
+  # it because it documents intent and is more robust against refactors.
+  "FAST003",
+  # Relative imports from parent packages are a deliberate style choice inside
+  # the `api/` subpackage; absolute imports would be noisier.
+  "TID252",
+  # Asking for explicit exception class defs adds churn without value here.
+  "EM101", "EM102", "TRY003",
+  # Missing return type annotation rules are noisy on router functions that
+  # return Pydantic models already declared via `response_model`.
+  "ANN201", "ANN202", "ANN204",
+  # `datetime.now(tz=...)` with `timezone.utc` is clearer than `UTC` alias in
+  # codebases that also reference `timedelta`; keep as-is.
+  "UP017",
+  # Type-checking block moves create import cycles with pydantic models that
+  # are referenced at runtime by FastAPI's response_model validation.
+  "TC001", "TC002", "TC003",
+  # ARG001 is noisy on FastAPI dependency-only params (e.g. Request for slowapi).
+  "ARG001",
+  # Boolean positional args are common in config objects (e.g. `show_history=True`).
+  "FBT001", "FBT002", "FBT003",
+  # Single-string concat in raise() is readable.
+  "ISC001",
+  # G004 f-string in logging is accepted for readability here.
+  "G004",
+  # Allow `from datetime import datetime, timezone` pattern.
+  "A005",
+  # Allow bound "any" exception in ingest/config pipelines.
+  "TRY300", "TRY301", "TRY400",
+  # Too many branches / statements on router functions.
+  "PLR0911", "PLR0912", "PLR0915",
+  # Return None explicitly is unnecessary with `-> None`.
+  "RET503", "RET504",
+  # ASYNC110 (async sleeps in retry) — our ingest is intentional.
+  "ASYNC110",
+  # Alembic + click bootstrap legitimately defer imports until first call.
+  "PLC0415",
+  # Tests / mock tracker use plain `random` for fixtures — no security impact.
+  "S311",
+  # `0.0.0.0` is the documented default for the dockerised api/ingest binds.
+  "S104",
+  # Pydantic field name `token_type="bearer"` triggers a false positive.
+  "S105",
+  # Verbose log messages with f-strings are fine in our ingest path.
+  "TRY401",
+  # Manual list comprehensions are fine where readability suffers from `extend`.
+  "PERF401",
+  # Tiny single-letter loop var rebinds are intentional in our compact loops.
+  "PLW2901",
+  # Tests intentionally raise without `from` for short cleanup paths.
+  "B904",
+  # Pure-helper functions (e.g. `_to_dict(obj)`) don't need explicit annotations.
+  "ANN001",
+  # ORM uppercase aliases (e.g. `Session = ...`) trip N806 in tests.
+  "N806",
+  # ``try/except: pass`` in ingest is the documented graceful-shutdown path.
+  "S110",
+  # Iteration var unpacking on `for k, _ in items()` is idiomatic.
+  "RUF059",
+  # ASYNC240 fires on `pathlib.Path` use in `init_db`; we offload to a thread.
+  "ASYNC240",
+  # ANN401 fires on Pydantic model_serializer wrap-mode handlers which require Any.
+  "ANN401",
+]
+extend-unsafe-fixes = []
+
+[tool.ruff.lint.per-file-ignores]
+# Tests may use star imports, missing docstrings, assert, long functions.
+"tests/**" = ["D", "ANN", "S", "PLR", "SLF001", "ARG", "INP001"]
+# Alembic autogen scripts — leave as-is.
+"**/alembic/**" = ["ALL"]
+# CLI uses print via click, not logger; nested async functions are idiomatic.
+"cli/**" = ["T201", "ANN", "D205"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"

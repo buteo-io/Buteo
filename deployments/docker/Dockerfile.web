@@ -1,0 +1,16 @@
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY apps/web/package.json apps/web/package-lock.json* ./apps/web/
+WORKDIR /app/apps/web
+RUN npm install --no-audit --no-fund
+COPY apps/web ./
+RUN npm run build
+
+FROM nginx:1.27-alpine
+COPY --from=build /app/apps/web/dist /usr/share/nginx/html
+# Nginx alpine entrypoint auto-runs envsubst on *.template files in
+# /etc/nginx/templates/, writing the rendered file to /etc/nginx/conf.d/.
+# Variables expanded: ${API_UPSTREAM} (default `api:8765`, override in compose/env).
+COPY deployments/docker/nginx.conf.template /etc/nginx/templates/default.conf.template
+ENV API_UPSTREAM=api:8765
+EXPOSE 80

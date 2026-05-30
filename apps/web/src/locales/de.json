@@ -1,0 +1,280 @@
+{
+  "app": {
+    "name": "TrackMy"
+  },
+  "nav": {
+    "map": "Karte",
+    "trips": "Reisen",
+    "places": "Orte",
+    "more": "Mehr"
+  },
+  "trips": {
+    "title": "Reisen",
+    "new": "Neue Reise",
+    "edit": "Reise bearbeiten",
+    "delete": "Reise löschen",
+    "start": "Start",
+    "end": "Ende",
+    "noTrips": "Noch keine Reisen angelegt",
+    "active": "Aktiv",
+    "ended": "Beendet",
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "z.B. Norwegen Sommer 2025",
+      "description": "Beschreibung",
+      "descriptionPlaceholder": "Highlights, Route, Notizen…",
+      "from": "Von",
+      "to": "Bis",
+      "ongoing": "Laufend — noch kein Enddatum (später schließen, wenn Reise endet)",
+      "device": "Gerät: {{name}}"
+    },
+    "errors": {
+      "toAfterFrom": "'Bis' muss nach 'Von' liegen",
+      "saveFailed": "Reise konnte nicht gespeichert werden",
+      "narrowWindowMediaLoss_one": "Das Kürzen der Reise entfernt 1 Übernachtungsort mit Fotos/Videos. Diese werden unwiderruflich gelöscht. Fortfahren?",
+      "narrowWindowMediaLoss_other": "Das Kürzen der Reise entfernt {{count}} Übernachtungsorte mit Fotos/Videos. Diese werden unwiderruflich gelöscht. Fortfahren?"
+    }
+  },
+  "places": {
+    "title": "Orte",
+    "add": "Hinzufügen",
+    "create": "Erstellen",
+    "new": "Neuer Ort",
+    "edit": "Ort bearbeiten",
+    "delete": "Ort löschen",
+    "noPlaces": "Noch keine Orte",
+    "noPlacesAdd": "Noch keine Orte. Klicke auf \"+ Hinzufügen\" und dann auf die Karte.",
+    "filterByTrip": "Nur Orte, die mit dieser Reise verknüpft sind",
+    "categories": {
+      "POI": "POI",
+      "Drinking Water": "Trinkwasser",
+      "Camping": "Camping",
+      "Parking": "Parken"
+    },
+    "confirmDelete": "\"{{name}}\" löschen?",
+    "fields": {
+      "category": "Kategorie",
+      "trips": "Verknüpfte Reisen",
+      "tripsHint": "Optional — diesen Ort mit einer oder mehreren Reisen verknüpfen."
+    }
+  },
+  "devices": {
+    "title": "Geräte",
+    "availableDevices": "Verfügbare Geräte",
+    "noDevices": "Keine Geräte",
+    "live": "Live",
+    "history": "Historisch",
+    "from": "Von",
+    "to": "Bis",
+    "apply": "Anzeigen",
+    "lastFix": "Letzte Position",
+    "hoursAgo": "vor {{hours}} Stunden",
+    "time": "Zeit",
+    "speed": "Geschwindigkeit",
+    "altitude": "Höhe",
+    "satellites": "Satelliten",
+    "noFix": "Noch keine Position"
+  },
+  "alarms": {
+    "title": "Alarme"
+  },
+  "share": {
+    "title": "Geteilt",
+    "manage": "Verwalten",
+    "addLink": "+ Freigabelink hinzufügen",
+    "create": "Link erstellen",
+    "revoke": "Widerrufen",
+    "copy": "Kopieren",
+    "copied": "Kopiert!",
+    "expires": "Läuft ab",
+    "noLinks": "Noch keine Freigabelinks. Erstelle einen, um deine Reisen öffentlich zu teilen.",
+    "newLink": "Neuer Link",
+    "createTripFirst": "Erstelle zuerst eine Reise, um sie zu teilen.",
+    "linkCreatedCopied": "Freigabelink erstellt und kopiert. Speichere diese URL jetzt — Token wird nur einmal angezeigt.",
+    "linkUpdated": "Freigabelink aktualisiert",
+    "linkDeleted": "Freigabelink gelöscht",
+    "confirmDelete": "Diesen Freigabelink löschen?",
+    "copyFailed": "Link konnte nicht kopiert werden",
+    "linkCopied": "Link in Zwischenablage kopiert",
+    "paused": "Pausiert",
+    "enabled": "Aktiviert",
+    "disabled": "Deaktiviert",
+    "trip": "Reise",
+    "unknown": "Unbekannt",
+    "delay": "Verzögerung",
+    "blur": "Unschärfe",
+    "places": "Orte",
+    "overnights": "Übernachtungen",
+    "name": "Name",
+    "namePlaceholder": "Meine geteilte Reise",
+    "description": "Beschreibung",
+    "descriptionPlaceholder": "Optionale Beschreibung für Betrachter",
+    "delayData": "Daten verzögern",
+    "hours": "Stunden",
+    "delayHint": "Letzte N Stunden ab jetzt ausschließen (Standard 72 = 3 Tage).",
+    "blurLocation": "Standort unscharf machen",
+    "blurHint": "Koordinatengenauigkeit für Datenschutz reduzieren.",
+    "passwordProtect": "Passwortgeschützt",
+    "password": "Passwort",
+    "newPassword": "Neues Passwort",
+    "shareConnectedPlaces": "Verknüpfte Orte teilen",
+    "allPlaces": "Alle Orte",
+    "loadingPlaces": "Orte laden...",
+    "noPlacesConnected": "Keine Orte mit dieser Reise verknüpft",
+    "shareOvernightSpots": "Übernachtungsplätze teilen",
+    "allOvernightSpots": "Alle Übernachtungsplätze",
+    "loadingOvernightSpots": "Übernachtungsplätze laden...",
+    "noOvernightSpots": "Keine Übernachtungsplätze für diese Reise erkannt",
+    "active": "Aktivieren / Deaktivieren",
+    "createLink": "Freigabelink erstellen",
+    "updateLink": "Freigabelink aktualisieren",
+    "errors": {
+      "duplicateName": "Ein Freigabelink mit diesem Namen existiert bereits.",
+      "rateLimit": "Zu viele Versuche. Bitte warte einen Moment und versuche es erneut."
+    }
+  },
+  "export": {
+    "title": "Export",
+    "exportHistorical": "Historische Daten als GPX exportieren",
+    "selectTrip": "Wähle eine Reise aus",
+    "noTrips": "Du hast noch keine Reise erstellt",
+    "includeMetadata": "Tracker-Metadaten einschließen",
+    "includeMetadataHint": "Beinhaltet Höhe, Geschwindigkeit und Satelliten, die vom GPS-Tracker empfangen wurden.",
+    "exportButton": "GPX exportieren"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "appearance": "Darstellung",
+    "theme": "Design",
+    "themeSystem": "System",
+    "themeLight": "Hell",
+    "themeDark": "Dunkel",
+    "language": "Sprache",
+    "account": "Konto",
+    "email": "E-Mail",
+    "changeEmail": "E-Mail ändern",
+    "changePassword": "Passwort ändern"
+  },
+  "overnightSpot": {
+    "title": "Übernachtungsplatz",
+    "arrived": "Angekommen",
+    "departed": "Abgereist",
+    "addPhoto": "Foto hinzufügen",
+    "deletePhoto": "Foto löschen",
+    "nights_one": "1 Nacht",
+    "nights_other": "{{count}} Nächte"
+  },
+  "trip": {
+    "title": "Reise",
+    "start": "Reise starten",
+    "end": "Reise beenden",
+    "delete": "Reise löschen",
+    "confirmDelete": "Reise \"{{name}}\" löschen?"
+  },
+  "common": {
+    "save": "Speichern",
+    "saveChanges": "Speichern",
+    "saving": "Speichern...",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "confirm": "Bestätigen",
+    "loading": "Laden...",
+    "error": "Fehler",
+    "success": "Erfolg",
+    "close": "Schließen",
+    "back": "Zurück",
+    "next": "Weiter",
+    "yes": "Ja",
+    "no": "Nein",
+    "clear": "Löschen",
+    "now": "jetzt",
+    "uploading": "Hochladen...",
+    "edit": "Bearbeiten",
+    "none": "Keine"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "logout": "Abmelden",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "loginButton": "Anmelden",
+    "loggingIn": "Anmeldung...",
+    "loginFailed": "Anmeldung fehlgeschlagen",
+    "subtitle1": "Wissen, wo es ist.",
+    "subtitle2": "Erinnern, wo du warst."
+  },
+  "dateRange": {
+    "all": "Alle",
+    "lastWeek": "Letzte Woche",
+    "lastMonth": "Letzter Monat",
+    "lastYear": "Letztes Jahr",
+    "custom": "Benutzerdefiniert",
+    "today": "Heute",
+    "24h": "24h",
+    "7d": "7d",
+    "quickPresets": "Schnellauswahl",
+    "yesterday": "Gestern",
+    "lastWeekend": "Letztes Wochenende"
+  },
+  "map": {
+    "colorBy": "Farben nach",
+    "none": "Aus",
+    "speed": "Geschwindigkeit",
+    "altitude": "Höhe",
+    "weekday": "Wochentag",
+    "speedUnit": "Geschwindigkeit (km/h)",
+    "altitudeUnit": "Höhe (m)",
+    "dayOfWeek": "Wochentag"
+  },
+  "filter": {
+    "allTrips": "Alle Reisen",
+    "thisTrip": "Diese Reise"
+  },
+  "entityModal": {
+    "titleNew_place": "Neuer Ort",
+    "titleEdit_place": "Ort bearbeiten",
+    "titleNew_overnight-spot": "Neuer Übernachtungsplatz",
+    "titleEdit_overnight-spot": "Übernachtungsplatz bearbeiten",
+    "placeholderName_place": "z.B. Aussichtspunkt See Bled",
+    "placeholderName_overnight-spot": "z.B. Campingplatz am See",
+    "comments": "Kommentare",
+    "commentsPlaceholder": "Gibt es etwas Bemerkenswertes?",
+    "media": "Fotos & Videos",
+    "chooseFile": "Datei auswählen",
+    "noFileChosen": "Keine Datei ausgewählt"
+  },
+  "detailsModal": {
+    "title": "Positionsdetails",
+    "timestamp": "Zeitstempel",
+    "iso": "ISO",
+    "speed": "Geschwindigkeit",
+    "altitude": "Höhe",
+    "satellites": "Satelliten",
+    "createdAt": "Erstellt am",
+    "coordinates": "Koordinaten"
+  },
+  "popup": {
+    "time": "Zeit",
+    "speed": "Geschwindigkeit",
+    "altitude": "Höhe",
+    "satellites": "Satelliten"
+  },
+  "gallery": {
+    "backToGrid": "Zurück zur Übersicht",
+    "prev": "Vorheriges",
+    "next": "Nächstes"
+  },
+  "toasts": {
+    "placeDeleted": "\"{{name}}\" gelöscht",
+    "overnightSpotsDetected_one": "1 Übernachtungsplatz erkannt",
+    "overnightSpotsDetected_other": "{{count}} Übernachtungsplätze erkannt",
+    "cooldown": "Erkennung abgekühlt, später erneut versuchen",
+    "raceLost": "Erkennung läuft bereits, bitte erneut versuchen",
+    "tripEnded": "\"{{name}}\" beendet",
+    "placeSaved": "\"{{name}}\" gespeichert",
+    "placeUpdated": "\"{{name}}\" aktualisiert",
+    "overnightSpotUpdated": "\"{{name}}\" aktualisiert",
+    "tripCreated": "Reise erstellt",
+    "tripUpdated": "Reise aktualisiert"
+  }
+}
