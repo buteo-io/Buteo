@@ -219,16 +219,15 @@ def _files_in(directory: Path, ext: str) -> list[Path]:
 
 
 def promote_daily(
-    backup_dir: Path, today: datetime, is_sqlite: bool, dry_run: bool
+    backup_dir: Path, today: datetime, ext: str, dry_run: bool
 ) -> None:
-    """Copy the newest hourly backup for each database prefix into daily/ if today has no entry."""
-    ext = _ext(is_sqlite)
+    """Copy the newest hourly backup for each prefix into daily/ if today has no entry."""
     hourly_dir = backup_dir / "hourly"
     daily_dir = backup_dir / "daily"
 
     hourly_files = _files_in(hourly_dir, ext)
     if not hourly_files:
-        _log("no hourly backups to promote to daily")
+        _log(f"no hourly {ext} backups to promote to daily")
         return
 
     by_db: dict[str, list[Path]] = {}
@@ -254,16 +253,15 @@ def promote_daily(
 
 
 def promote_weekly(
-    backup_dir: Path, today: datetime, is_sqlite: bool, dry_run: bool
+    backup_dir: Path, today: datetime, ext: str, dry_run: bool
 ) -> None:
-    """Copy the newest daily backup for each database prefix into weekly/ if this ISO-week has no entry."""
-    ext = _ext(is_sqlite)
+    """Copy the newest daily backup for each prefix into weekly/ if this ISO-week has no entry."""
     daily_dir = backup_dir / "daily"
     weekly_dir = backup_dir / "weekly"
 
     daily_files = _files_in(daily_dir, ext)
     if not daily_files:
-        _log("no daily backups to promote to weekly")
+        _log(f"no daily {ext} backups to promote to weekly")
         return
 
     by_db: dict[str, list[Path]] = {}
@@ -289,10 +287,8 @@ def promote_weekly(
             shutil.copy2(src, dest)
 
 
-def prune(backup_dir: Path, is_sqlite: bool, now: datetime, dry_run: bool) -> None:
+def prune(backup_dir: Path, ext: str, now: datetime, dry_run: bool) -> None:
     """Delete hourly files >7 days old and daily files >30 days old."""
-    ext = _ext(is_sqlite)
-
     cutoffs = {
         "hourly": now - HOURLY_KEEP,
         "daily": now - DAILY_KEEP,
@@ -305,6 +301,33 @@ def prune(backup_dir: Path, is_sqlite: bool, now: datetime, dry_run: bool) -> No
                 _log(f"prune {tier}  {f.name}  (mtime {mtime.date()})")
                 if not dry_run:
                     f.unlink()
+
+
+def backup_uploads(
+    uploads_dir: Path, backup_dir: Path, stem_prefix: str, dry_run: bool
+) -> Path | None:
+    """Pack uploads folder into backup_dir/hourly/uploads_<YYYY-MM-DD_HH-MM>.tar.
+
+    No compression is used because uploaded media files (images, videos) are already
+    heavily compressed formats (JPEG, PNG, MP4), making compression CPU-heavy and wasteful.
+    """
+    if not uploads_dir.exists():
+        _log(f"uploads directory {uploads_dir} does not exist, skipping.")
+        return None
+
+    has_files = any(uploads_dir.iterdir()) if uploads_dir.is_dir() else False
+    if not has_files:
+        _log(f"uploads directory {uploads_dir} is empty, skipping.")
+        return None
+
+    dest = backup_dir / "hourly" / f"uploads_{stem_prefix}.tar"
+    _log(f"uploads backup  {uploads_dir} -> {dest}")
+    if not dry_run:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        with tarfile.open(dest, "w") as tar:
+            for item in uploads_dir.iterdir():
+                tar.add(item, arcname=item.name)
+    return dest
 
 
 # ---------------------------------------------------------------------------
@@ -373,9 +396,26 @@ def main() -> int:
             for db_name in db_names:
                 backup_postgres(db_name, backup_dir, stem_hourly, args.dry_run)
 
-        promote_daily(backup_dir, now, is_sqlite, args.dry_run)
-        promote_weekly(backup_dir, now, is_sqlite, args.dry_run)
-        prune(backup_dir, is_sqlite, now, args.dry_run)
+        # Back up uploads folder if it exists
+        if data_dir:
+            uploads_dir = Path(data_dir) / "uploads"
+        else:
+            try:
+                base_path = _sqlite_db_path(database_url)
+                uploads_dir = base_path.parent / "uploads"
+            except Exception:
+                uploads_dir = Path("uploads")
+
+        backup_uploads(uploads_dir, backup_dir, stem_hourly, args.dry_run)
+
+        db_ext = _ext(is_sqlite)
+        promote_daily(backup_dir, now, db_ext, args.dry_run)
+        promote_weekly(backup_dir, now, db_ext, args.dry_run)
+        prune(backup_dir, db_ext, now, args.dry_run)
+
+        promote_daily(backup_dir, now, ".tar", args.dry_run)
+        promote_weekly(backup_dir, now, ".tar", args.dry_run)
+        prune(backup_dir, ".tar", now, args.dry_run)
 
     except Exception as exc:
         _log(f"ERROR: {exc}")

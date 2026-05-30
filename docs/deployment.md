@@ -140,7 +140,7 @@ Buteo includes an integrated backup utility that creates consistent, online back
 ```bash
 docker compose run --rm api python scripts/backup_db.py
 ```
-This utility automatically detects and hot-copies the central `identity.db` and all individual `tenant_*.db` user databases to `/data/backups/hourly/`, `/data/backups/daily/`, etc., executing vacuum cycles and rotating old snapshots automatically.
+This utility automatically detects and hot-copies the central `identity.db` and all individual `tenant_*.db` user databases, along with the `uploads/` media directory, to `/data/backups/hourly/`, `/data/backups/daily/`, etc., executing vacuum cycles, archiving media into uncompressed `.tar` files, and rotating old snapshots automatically.
 
 **Recommended Crontab Configuration:**
 Install a cronjob on the Docker host to back up your database every night at midnight:

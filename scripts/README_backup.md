@@ -7,11 +7,11 @@ detected automatically from `DATABASE_URL` (same logic as the app).
 
 | Tier    | Location         | Filename example                  | Kept      |
 |---------|------------------|-----------------------------------|-----------|
-| Hourly  | `hourly/`        | `identity_2026-05-12_14-00.db`, `tnttnt_foo_2026-05-12_14-00.db` | 7 days    |
-| Daily   | `daily/`         | `identity_2026-05-12.db`, `tnttnt_foo_2026-05-12.db`              | 30 days   |
-| Weekly  | `weekly/`        | `identity_2026-W19.db`, `tnttnt_foo_2026-W19.db`                | forever   |
+| Hourly  | `hourly/`        | `identity_2026-05-12_14-00.db`, `uploads_2026-05-12_14-00.tar` | 7 days    |
+| Daily   | `daily/`         | `identity_2026-05-12.db`, `uploads_2026-05-12.tar`              | 30 days   |
+| Weekly  | `weekly/`        | `identity_2026-W19.db`, `uploads_2026-W19.tar`                | forever   |
 
-PostgreSQL dumps use `.pgdump` instead of `.db`.
+PostgreSQL dumps use `.pgdump` instead of `.db`. Media uploads are archived into uncompressed `.tar` files (avoiding CPU overhead since images/videos are already compressed).
 
 ## Setup
 
@@ -41,7 +41,7 @@ DATA_DIR/
     hourly/
     daily/
     weekly/
-  uploaded/           ← future: user media
+  uploads/            ← User media (automatically backed up)
     <user_id>/
 ```
 
