@@ -353,16 +353,14 @@ export function useTrackMap(
     };
 
     const buildPopupHtml = (info: DevicePopupInfo): string => {
-      const { name, imei, position: p } = info;
+      const { name, position: p } = info;
       const time = new Date(p.time_id).toLocaleString();
       const speed = p.speed != null ? `${p.speed.toFixed(1)} km/h` : "—";
       const alt = p.altitude != null ? `${Math.round(p.altitude)} m` : "—";
       const satellites = p.satellites != null ? p.satellites : "—";
-      const imeiHtml = imei ? `<div class="popup-imei">${escapeHtml(imei)}</div>` : "";
       return `
         <div class="popup">
           <div class="popup-title">${escapeHtml(name)}</div>
-          ${imeiHtml}
           <table class="popup-table">
             <tr><th>${tPopupLabel("time")}</th><td>${escapeHtml(time)}</td></tr>
             <tr><th>${tPopupLabel("speed")}</th><td>${speed}</td></tr>
