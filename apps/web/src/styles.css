@@ -2908,7 +2908,7 @@ button.ghost:hover {
 }
 .category-header-btn .chevron {
   transition: transform 0.15s;
-  font-size: 10px;
+  font-size: 20px;
   opacity: 0.7;
   display: inline-block;
 }

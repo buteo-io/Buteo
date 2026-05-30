@@ -499,7 +499,6 @@ export default function App() {
                 if (pts.length && map.current) {
                   map.current.fitTo(pts.map((p) => [p.lon, p.lat] as [number, number]));
                 }
-                closeOverlay();
               } catch (e: any) {
                 setErr(e.message);
               }
