@@ -168,7 +168,7 @@ function TripPlaces({
   onToggleFilterByTrip: () => void;
   onFlyToPlace: (p: Place) => void;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="trip-places">
@@ -230,7 +230,7 @@ function TripShareLinks({
   onCopyShare: (linkId: string) => void;
 }) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="trip-places" style={{ marginTop: "12px", marginBottom: "12px" }}>

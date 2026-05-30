@@ -156,6 +156,8 @@ export default function App() {
     [userTrips, selectedTripId],
   );
 
+  const activeSegment = selectedTripId ? "trip" : mode;
+
   // Places shown in the side list: only the trip filter applies. Hidden tags
   // still appear so the user can un-hide them.
   const listPlaces = useMemo(() => {
@@ -470,7 +472,6 @@ export default function App() {
             onOpen={async (trip) => {
               try {
                 setSelectedTripId(trip.id);
-                setExpandedTripId(trip.id);
                 setPlacesFilterByTrip(true);
                 setMode("history");
                 setRange({
@@ -668,12 +669,16 @@ export default function App() {
             <div className="map-mode-buttons">
               <button
                 type="button"
-                className={`map-mode-btn live ${mode === "live" ? "active" : ""}`}
+                className={`map-mode-btn live ${activeSegment === "live" ? "active" : ""}`}
                 onClick={async () => {
                   if (mode !== "live") {
                     setMode("live");
                   } else {
                     map.current?.openDevicePopup();
+                  }
+                  if (tab === "trips") {
+                    setTab("map");
+                    setSidebarOpen(false);
                   }
                 }}
               >
@@ -689,14 +694,33 @@ export default function App() {
               </button>
               <button
                 type="button"
-                className={`map-mode-btn historic ${mode === "history" ? "active" : ""}`}
+                className={`map-mode-btn historic ${activeSegment === "history" ? "active" : ""}`}
                 onClick={() => {
                   setDateRangeModalOpen(true);
+                  if (tab === "trips") {
+                    setTab("map");
+                    setSidebarOpen(false);
+                  }
                 }}
               >
                 {t("devices.history")}
               </button>
+              <button
+                type="button"
+                className={`map-mode-btn historic ${activeSegment === "trip" ? "active" : ""}`}
+                onClick={() => {
+                  setTab("trips");
+                  setSidebarOpen(true);
+                }}
+              >
+                {t("trip.title")}
+              </button>
             </div>
+            {selectedTrip && (
+              <div className="map-active-trip-name">
+                {selectedTrip.name}
+              </div>
+            )}
           </div>
         )}
 
