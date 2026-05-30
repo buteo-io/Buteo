@@ -32,7 +32,7 @@ def _run(coro):
 @click.group()
 def cli() -> None:
     """Tracker management CLI."""
-    configure_logging()
+    configure_logging(AppConfig.log_level, debug=AppConfig.debug)
 
 
 @cli.command("init-db")

@@ -25,6 +25,7 @@ import httpx
 from sqlalchemy import delete, select
 
 from tracker_core.custom_logger import configure_logging
+from tracker_core.internal.appctx.config import AppConfig
 from tracker_core.store.core_db import CoreSessionLocal as SessionLocal
 from tracker_core.store.core_db import init_core_db as init_db
 from tracker_core.store.identity_db import GPSDevice, IdentitySessionLocal, Tenant
@@ -570,5 +571,5 @@ async def main() -> None:  # noqa: C901
 
 
 if __name__ == "__main__":
-    configure_logging()
+    configure_logging(AppConfig.log_level, debug=AppConfig.debug)
     asyncio.run(main())

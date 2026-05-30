@@ -40,7 +40,7 @@ from .routers import (
     trips,
 )
 
-configure_logging(AppConfig.log_level)
+configure_logging(AppConfig.log_level, debug=AppConfig.debug)
 logger = logging.getLogger(__name__)
 
 

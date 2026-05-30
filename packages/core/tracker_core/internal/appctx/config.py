@@ -27,6 +27,7 @@ class Settings(BaseSettings):
 
     app_name: str = "gps-tracker"
     log_level: str = "INFO"
+    debug: bool = False
 
     data_dir: str | None = None
 

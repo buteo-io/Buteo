@@ -28,6 +28,8 @@ async def main() -> None:
             port=AppConfig.ingest_osmand_port,
             proxy_headers=True,
             forwarded_allow_ips="*",
+            access_log=False,
+            log_config=None,
         ),
     )
     logger.info("listening for osmand", extra={"port": AppConfig.ingest_osmand_port})
@@ -36,5 +38,5 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    configure_logging(AppConfig.log_level)
+    configure_logging(AppConfig.log_level, debug=AppConfig.debug)
     asyncio.run(main())

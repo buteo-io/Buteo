@@ -89,6 +89,32 @@ def create_app() -> FastAPI:
     # decorator to find it, and 429s need a JSON-shaped error body.
     app.state.limiter = _limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    import logging
+    import time
+
+    logger = logging.getLogger(__name__)
+
+    @app.middleware("http")
+    async def access_log(request: Request, call_next):
+        t0 = time.perf_counter()
+        response = await call_next(request)
+        ms = round((time.perf_counter() - t0) * 1000)
+        client = request.headers.get(
+            "x-forwarded-for", request.client.host if request.client else "-"
+        )
+        logger.info(
+            "http_access",
+            extra={
+                "method": request.method,
+                "path": request.url.path,
+                "status": response.status_code,
+                "ms": ms,
+                "client": client,
+            },
+        )
+        return response
+
     app.include_router(_router)
     return app
 
@@ -99,8 +125,9 @@ app = create_app()
 def main() -> None:
     import uvicorn
     from tracker_core.custom_logger import configure_logging
+    from tracker_core.internal.appctx.config import AppConfig
 
-    configure_logging()
+    configure_logging(AppConfig.log_level, debug=AppConfig.debug)
     with contextlib.suppress(KeyboardInterrupt):
         uvicorn.run(
             "ingest.osmand.api:app",
@@ -108,6 +135,8 @@ def main() -> None:
             port=8766,
             proxy_headers=True,
             forwarded_allow_ips="*",
+            access_log=False,
+            log_config=None,
         )
 
 

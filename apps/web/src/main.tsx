@@ -7,12 +7,8 @@ import PublicShare from "./pages/PublicShare";
 import { DateRangeProvider } from "./contexts/DateRangeContext";
 import { EntityProvider } from "./contexts/EntityContext";
 import { MapStateProvider } from "./contexts/MapStateContext";
-import { initDummyPlugin } from "./plugins/dummy";
 import "./i18n";
 import "./styles.css";
-
-// Initialize plugins
-initDummyPlugin();
 
 function AuthenticatedRoot() {
   const { me, loading } = useAuth();

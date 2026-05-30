@@ -14,10 +14,13 @@ export function PinnedTip({ position, xy, onMore, onClose }: Props) {
   const { t } = useTranslation();
   return (
     <>
-      <div className="pin-dot" style={{ left: xy.x, top: xy.y }} />
+      <div
+        className="pin-dot"
+        style={{ left: `${xy.x}px`, top: `${xy.y}px` }}
+      />
       <div
         className="pin-tip"
-        style={{ left: xy.x, top: xy.y }}
+        style={{ left: `${xy.x}px`, top: `${xy.y}px` }}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
@@ -26,10 +29,12 @@ export function PinnedTip({ position, xy, onMore, onClose }: Props) {
         </button>
         <div className="pin-time">{new Date(p.time_id).toLocaleString()}</div>
         <div className="pin-meta">
-          <strong>{t("popup.speed")}:</strong> {p.speed != null ? `${p.speed.toFixed(0)} km/h` : "—"}
+          <strong>{t("popup.speed")}:</strong>{" "}
+          {p.speed != null ? `${p.speed.toFixed(0)} km/h` : "—"}
         </div>
         <div className="pin-meta">
-          <strong>{t("popup.altitude")}:</strong> {p.altitude != null ? `${Math.round(p.altitude)} m` : "—"}
+          <strong>{t("popup.altitude")}:</strong>{" "}
+          {p.altitude != null ? `${Math.round(p.altitude)} m` : "—"}
         </div>
         <button className="primary small pin-more" onClick={onMore}>
           {t("common.more") || "more"} →

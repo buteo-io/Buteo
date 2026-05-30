@@ -184,10 +184,12 @@ def _parse_owntracks_fix(
     request: Request, payload: object
 ) -> tuple[str, PositionData] | None:
     if not isinstance(payload, dict):
+        logger.warning("owntracks_bad_type", extra={"type": type(payload).__name__})
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "bad owntracks payload")
 
     msg_type = _str(payload.get("_type"))
     if msg_type == "encrypted":
+        logger.warning("owntracks_encrypted_unsupported")
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, "encrypted owntracks payload unsupported"
         )
@@ -196,19 +198,29 @@ def _parse_owntracks_fix(
 
     ident = _owntracks_ident(request, payload)
     if not ident:
+        logger.warning("owntracks_missing_device_id", extra={"payload": payload})
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "missing device id")
 
     lat = _flt(_str(payload.get("lat")))
     lon = _flt(_str(payload.get("lon")))
     if lat is None or lon is None:
+        logger.warning("owntracks_missing_coords", extra={"payload": payload})
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "missing lat/lon")
     if not (-90.0 <= lat <= 90.0) or not (-180.0 <= lon <= 180.0):
+        logger.warning("owntracks_invalid_coords", extra={"lat": lat, "lon": lon})
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "lat/lon out of range")
 
     raw_ts = payload.get("tst")
     if raw_ts is None:
         raw_ts = payload.get("created_at")
-    ts = _parse_timestamp(_str(raw_ts))
+
+    try:
+        ts = _parse_timestamp(_str(raw_ts))
+    except HTTPException as e:
+        logger.warning(
+            "owntracks_bad_timestamp", extra={"raw_ts": raw_ts, "error": str(e.detail)}
+        )
+        raise
 
     speed_kmh = _flt(_str(payload.get("vel")))
     if speed_kmh is not None and speed_kmh < 0:
@@ -276,37 +288,73 @@ async def _ingest_one(p: dict[str, str]) -> None:
     ident, fix = _parse_fix(p)
     tenant_id = await get_tenant_by_imei(ident)
     if not tenant_id:
+        logger.warning("traccar_unauthorized_tenant", extra={"ident": ident})
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, "unknown or inactive device/tenant"
         )
 
     async with tenant_db_manager.get_tenant_session(tenant_id) as db:
         device = await _resolve_device(db, ident)
-        await store_positions(db, device.id, [fix])
+        written = await store_positions(db, device.id, [fix])
+        logger.debug(
+            "traccar_stored",
+            extra={
+                "device_id": device.id,
+                "ident": ident,
+                "lat": fix.lat,
+                "lon": fix.lon,
+                "time_id": fix.time_id.isoformat(),
+                "written": written,
+            },
+        )
 
 
 async def _ingest_one_owntracks(request: Request) -> bool:
     body = await request.body()
     if not body:
+        logger.warning("owntracks_ignored", extra={"reason": "empty_body"})
         return False
 
     try:
         payload = json.loads(body)
     except json.JSONDecodeError as e:
+        logger.warning("owntracks_bad_payload", extra={"error": str(e)})
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "bad owntracks payload") from e
 
     parsed = _parse_owntracks_fix(request, payload)
     if parsed is None:
+        msg_type = payload.get("_type") if isinstance(payload, dict) else None
+        logger.info(
+            "owntracks_ignored",
+            extra={
+                "reason": "non_location_payload"
+                if msg_type != "location"
+                else "unknown",
+                "msg_type": msg_type,
+            },
+        )
         return False
 
     ident, fix = parsed
     tenant_id = await get_tenant_by_imei(ident)
     if not tenant_id:
+        logger.warning("owntracks_unauthorized_tenant", extra={"ident": ident})
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, "unknown or inactive device/tenant"
         )
 
     async with tenant_db_manager.get_tenant_session(tenant_id) as db:
         device = await _resolve_device(db, ident)
-        await store_positions(db, device.id, [fix])
+        written = await store_positions(db, device.id, [fix])
+        logger.debug(
+            "owntracks_stored",
+            extra={
+                "device_id": device.id,
+                "ident": ident,
+                "lat": fix.lat,
+                "lon": fix.lon,
+                "time_id": fix.time_id.isoformat(),
+                "written": written,
+            },
+        )
     return True
