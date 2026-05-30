@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Device, Place, ShareLink, Trip, TripStats } from "../api";
-import { EditDeleteActions } from "../components/RowActions";
 
 type Props = {
   trips: Trip[];
@@ -81,8 +80,8 @@ export function TripsPanel({
                 >
                   <span className="trip-header-main">
                     <span className="list-title">{t.name}</span>
+                    <span className="muted small">{dev?.name}</span>
                     <span className="muted small">
-                      {dev ? `${dev.name} · ` : ""}
                       {new Date(t.started_at).toLocaleDateString()} →{" "}
                       {t.ended_at ? (
                         new Date(t.ended_at).toLocaleDateString()
@@ -93,11 +92,29 @@ export function TripsPanel({
                   </span>
                 </button>
               </div>
-              <EditDeleteActions
-                onEdit={() => onEdit(t)}
-                onDelete={() => onDelete(t.id)}
-                confirmDelete={`Delete trip "${t.name}"?`}
-              />
+              <button
+                className="icon-btn trip-edit-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(t);
+                }}
+                title="Edit"
+                aria-label="Edit"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="14"
+                  height="14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                </svg>
+              </button>
               {isOpen && (
                 <div className="trip-body">
                   {t.description && (
@@ -136,7 +153,7 @@ export function TripsPanel({
 
                   <TripShareLinks
                     links={tripShareLinks}
-                    onManageShare={(linkId) => onShare(t, linkId)}
+                    onEditShare={(linkId) => onShare(t, linkId)}
                     onAddShare={() => onShare(t)}
                     onCopyShare={onCopyShare}
                   />
@@ -220,12 +237,12 @@ function TripPlaces({
 
 function TripShareLinks({
   links,
-  onManageShare,
+  onEditShare,
   onAddShare,
   onCopyShare,
 }: {
   links: ShareLink[];
-  onManageShare: (linkId: string) => void;
+  onEditShare: (linkId: string) => void;
   onAddShare: () => void;
   onCopyShare: (linkId: string) => void;
 }) {
@@ -254,50 +271,50 @@ function TripShareLinks({
               {links.map((link) => (
                 <li
                   key={link.id}
-                  className="list-item"
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    cursor: "default",
-                    padding: "8px 12px",
-                    border: "1px solid var(--border-color, #eee)",
-                    borderRadius: "4px",
-                    marginBottom: "6px",
-                    backgroundColor: "var(--bg-card, #fff)",
-                  }}
+                  className="list-item share-link-item"
                 >
-                  <div className="list-main" style={{ flex: 1, minWidth: 0, padding: 0 }}>
-                    <div className="list-title" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", margin: 0, fontSize: "0.95rem" }}>
-                      <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{link.name}</span>
-                      {!link.is_active && (
-                        <span className="share-link-badge" style={{ fontSize: "0.75rem", padding: "1px 6px" }}>
-                          {t("share.paused")}
+                  <div className="share-link-main">
+                    <div className="share-link-title-row">
+                      <strong>{link.name}</strong>
+                      {link.is_active ? (
+                        <span className="share-link-badge share-link-badge-active">
+                          {t("share.enabled")}
+                        </span>
+                      ) : (
+                        <span className="share-link-badge share-link-badge-disabled">
+                          {t("share.disabled")}
+                        </span>
+                      )}
+                      {link.has_password && (
+                        <span className="share-link-badge share-link-badge-locked">
+                          🔒
                         </span>
                       )}
                     </div>
-                    <div className="muted small" style={{ fontSize: "0.75rem", marginTop: "2px" }}>
+                    <div className="share-link-stats">
                       {t("share.delay")}: {link.delay_hours}h · {t("share.blur")}: {link.blur_meters}m
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    className="icon-btn"
-                    style={{ marginLeft: "12px" }}
-                    onClick={() => onCopyShare(link.id)}
-                    title={t("share.copy")}
-                    aria-label={t("share.copy")}
-                  >
-                    <CopyIcon />
-                  </button>
-                  <button
-                    type="button"
-                    className="ghost small"
-                    style={{ padding: "4px 8px", marginLeft: "8px", fontSize: "0.8rem" }}
-                    onClick={() => onManageShare(link.id)}
-                  >
-                    {t("share.manage")}
-                  </button>
+                  <div className="actions share-link-actions">
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      onClick={() => onCopyShare(link.id)}
+                      title={t("share.copy")}
+                      aria-label={t("share.copy")}
+                    >
+                      <CopyIcon />
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      onClick={() => onEditShare(link.id)}
+                      title={t("share.edit")}
+                      aria-label={t("share.edit")}
+                    >
+                      <EditIcon />
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -317,6 +334,7 @@ function TripShareLinks({
 }
 
 const iconProps = {
+  viewBox: "0 0 24 24",
   width: 14,
   height: 14,
   fill: "none",
@@ -332,6 +350,15 @@ function CopyIcon() {
     <svg {...iconProps}>
       <rect x="9" y="9" width="13" height="13" rx="2" />
       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function EditIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
     </svg>
   );
 }

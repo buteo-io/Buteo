@@ -93,6 +93,7 @@
     "linkCreatedCopied": "Share link created and copied. Save this URL now — token shown once.",
     "linkUpdated": "Share link updated",
     "linkDeleted": "Share link deleted",
+    "editLink": "Edit share link",
     "confirmDelete": "Delete this share link?",
     "copyFailed": "Could not copy link",
     "linkCopied": "Link copied to clipboard",
@@ -114,6 +115,9 @@
     "delayHint": "Exclude last N hours from now (default 72 = 3 days).",
     "blurLocation": "Blur location",
     "blurHint": "Reduce coordinate precision for privacy.",
+    "passwordProtect": "Password protect",
+    "password": "Password",
+    "newPassword": "New Password",
     "shareConnectedPlaces": "Share connected places",
     "allPlaces": "All places",
     "loadingPlaces": "Loading places...",
@@ -126,7 +130,8 @@
     "createLink": "Create Share Link",
     "updateLink": "Update Share Link",
     "errors": {
-      "duplicateName": "A share link with this name already exists."
+      "duplicateName": "A share link with this name already exists.",
+      "rateLimit": "Too many attempts. Please wait a moment and try again."
     }
   },
   "export": {
@@ -165,7 +170,7 @@
     "start": "Start Trip",
     "end": "End Trip",
     "delete": "Delete Trip",
-    "confirmDelete": "Delete this trip?"
+    "confirmDelete": "Delete trip \"{{name}}\"?"
   },
   "common": {
     "save": "Save",

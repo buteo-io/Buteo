@@ -204,6 +204,7 @@ export type ShareLink = {
   delay_hours: number;
   blur_meters: number;
   is_active: boolean;
+  has_password?: boolean;
   place_ids: string[];
   overnight_spot_ids: string[];
   created_at: string;

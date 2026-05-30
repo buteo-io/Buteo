@@ -928,6 +928,24 @@ export default function App() {
         device={device}
         overnightSpots={tripModalOvernightSpots}
         onClose={() => setTripModal(null)}
+        onDelete={async (id) => {
+          try {
+            await api.deleteTrip(id);
+            if (selectedTripId === id) {
+              setSelectedTripId(null);
+              setPlacesFilterByTrip(false);
+              setHistoryPts([]);
+              map.current?.setOvernightSpots([]);
+              map.current?.clearHistory();
+            }
+            if (expandedTripId === id) {
+              setExpandedTripId(null);
+            }
+            void refreshTrips();
+          } catch (e: any) {
+            setErr(e.message);
+          }
+        }}
         onSubmit={async (body, id) => {
           if (id == null) {
             await api.createTrip(body);

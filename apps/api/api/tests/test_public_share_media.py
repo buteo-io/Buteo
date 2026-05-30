@@ -411,3 +411,105 @@ async def test_share_link_unique_names(
         },
     )
     assert res5.status_code == 200, res5.text
+
+
+@pytest.mark.asyncio
+async def test_public_share_password_protection(
+    authed: httpx.AsyncClient,
+    client: httpx.AsyncClient,
+    account: Account,
+):
+    """Verify password protection and cookie session unlock flow."""
+    # 1. Create a trip
+    start = datetime.now(timezone.utc) - timedelta(days=5)
+    trip_res = await authed.post(
+        "/trips",
+        json={
+            "device_id": str(account.device_pid),
+            "name": "Password Protected Trip",
+            "started_at": start.isoformat(),
+            "ended_at": None,
+        },
+    )
+    assert trip_res.status_code == 200
+    trip = trip_res.json()
+    trip_id = trip["id"]
+    trip_public_id = trip["id"]
+
+    # 2. Add an overnight spot
+    async with SessionLocal() as s:
+        from tracker_core.store.models import Trip as TripModel
+        trip_db = (await s.execute(select(TripModel).where(TripModel.public_id == trip_public_id))).scalar_one()
+        spot = OvernightSpot(
+            user_id=account.user_id,
+            trip_id=trip_db.id,
+            name="Secret Spot",
+            lon=13.0,
+            lat=52.0,
+            nights_count=1,
+            last_stay_at=start + timedelta(hours=12),
+        )
+        s.add(spot)
+        await s.commit()
+        await s.refresh(spot)
+        spot_public_id = spot.public_id
+
+    # 3. Upload media for this spot
+    png_content = b"\x89PNG\r\n\x1a\n"
+    files = {"file": ("spot.png", png_content, "image/png")}
+    r_upload = await authed.post(f"/overnight-spots/{spot_public_id}/media", files=files)
+    assert r_upload.status_code == 200
+    media_id = r_upload.json()["id"]
+
+    # 4. Create ShareLink with password
+    share_res = await authed.post(
+        "/share-links",
+        json={
+            "trip_id": trip_id,
+            "name": "Secret Trip Share",
+            "delay_hours": 0,
+            "password": "super-secure-password",
+            "overnight_spot_ids": [str(spot_public_id)],
+        },
+    )
+    assert share_res.status_code == 201
+    share_link = share_res.json()
+    share_token = share_link["token"]
+    assert share_link["has_password"] is True
+
+    # 5. Access shared trip without password -> expect 401 PASSWORD_REQUIRED
+    get_share_res = await client.get(f"/share/{share_token}")
+    assert get_share_res.status_code == 401
+    assert get_share_res.json()["detail"] == "PASSWORD_REQUIRED"
+
+    # 6. Access media without password -> expect 401 PASSWORD_REQUIRED
+    media_res = await client.get(f"/share/{share_token}/media/{media_id}")
+    assert media_res.status_code == 401
+    assert media_res.json()["detail"] == "PASSWORD_REQUIRED"
+
+    # 7. Try wrong password -> expect 401 Incorrect password
+    verify_res = await client.post(f"/share/{share_token}/verify", json={"password": "wrong"})
+    assert verify_res.status_code == 401
+    assert verify_res.json()["detail"] == "Incorrect password"
+
+    # 8. Verify with correct password -> expect 200 with cookies
+    verify_res = await client.post(f"/share/{share_token}/verify", json={"password": "super-secure-password"})
+    assert verify_res.status_code == 200
+    assert verify_res.json() == {"ok": True}
+    
+    # Check that cookie is in client's cookie jar
+    cookie_name = f"share_unlock_{share_link['id']}"
+    assert cookie_name in client.cookies
+
+    # 9. Access shared trip again with the cookie -> expect 200 and trip details
+    get_share_res = await client.get(f"/share/{share_token}")
+    assert get_share_res.status_code == 200
+    shared_data = get_share_res.json()
+    assert shared_data["trip_name"] == "Password Protected Trip"
+    assert len(shared_data["overnight_spots"]) == 1
+    assert shared_data["overnight_spots"][0]["name"] == "Secret Spot"
+
+    # 10. Access media again with the cookie -> expect 200
+    media_res = await client.get(f"/share/{share_token}/media/{media_id}")
+    assert media_res.status_code == 200
+    assert media_res.content == png_content

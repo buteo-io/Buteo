@@ -15,9 +15,10 @@ type Props = {
   overnightSpots: OvernightSpot[];
   onClose: () => void;
   onSubmit: (body: Omit<Trip, "id">, id?: string) => Promise<void> | void;
+  onDelete?: (id: string) => Promise<void> | void;
 };
 
-export function TripModal({ state, device, overnightSpots, onClose, onSubmit }: Props) {
+export function TripModal({ state, device, overnightSpots, onClose, onSubmit, onDelete }: Props) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -116,6 +117,20 @@ export function TripModal({ state, device, overnightSpots, onClose, onSubmit }: 
       error={submitError}
       footer={
         <>
+          {isEdit && onDelete && (
+            <button
+              className="ghost icon-btn-danger"
+              style={{ marginRight: "auto" }}
+              onClick={() => {
+                if (window.confirm(t("trip.confirmDelete", { name: state.trip.name }))) {
+                  void onDelete(state.trip.id);
+                  onClose();
+                }
+              }}
+            >
+              {t("common.delete")}
+            </button>
+          )}
           <button className="ghost" onClick={onClose}>{t("common.cancel")}</button>
           <button className="primary" onClick={submit} disabled={saving || !name.trim()}>
             {saving ? t("common.saving") : isEdit ? t("common.saveChanges") : t("trips.new")}

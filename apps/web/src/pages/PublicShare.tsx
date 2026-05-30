@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Place, MediaItem } from "../api";
 import { useTrackMap } from "../components/Map";
 import { GalleryModal } from "../modals/GalleryModal";
@@ -46,6 +47,7 @@ type Props = {
 };
 
 export default function PublicShare({ token }: Props) {
+  const { t } = useTranslation();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useTrackMap(mapContainer, (id) => `/api/share/${token}/media/${id}`);
   const [data, setData] = useState<PublicShareData | null>(null);
@@ -53,38 +55,93 @@ export default function PublicShare({ token }: Props) {
   const [loading, setLoading] = useState(true);
   const [galleryMedia, setGalleryMedia] = useState<MediaItem[] | null>(null);
   const [detailsModal, setDetailsModal] = useState<EntityDetailsModalState>(null);
+  const [passwordRequired, setPasswordRequired] = useState(false);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   const getMediaUrl = (mediaId: string) => `/api/share/${token}/media/${mediaId}`;
 
-  useEffect(() => {
-    fetch(`/api/share/${token}`, { credentials: "omit" })
-      .then(async (r) => {
-        if (!r.ok) {
-          let detail: string | null = null;
+  const loadShareData = () => {
+    fetch(`/api/share/${token}`, { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) {
+          let errorDetail: string | null = null;
           try {
-            const payload = await r.json();
-            if (typeof payload?.detail === "string") detail = payload.detail;
+            const errorPayload = await response.json();
+            if (typeof errorPayload?.detail === "string") {
+              errorDetail = errorPayload.detail;
+            }
           } catch {
-            const text = await r.text();
-            detail = text || null;
+            const rawText = await response.text();
+            errorDetail = rawText || null;
           }
 
-          if (r.status === 404) {
+          if (response.status === 429) {
+            throw new Error(t("share.errors.rateLimit"));
+          }
+          if (response.status === 401 && errorDetail === "PASSWORD_REQUIRED") {
+            setPasswordRequired(true);
+            return null;
+          }
+
+          if (response.status === 404) {
             throw new Error("This share link does not exist or is no longer active.");
           }
-          throw new Error(detail || r.statusText || "Could not load shared trip.");
+          throw new Error(errorDetail || response.statusText || "Could not load shared trip.");
         }
-        return r.json();
+        return response.json();
       })
-      .then((d: PublicShareData) => {
-        setData(d);
+      .then((shareData: PublicShareData | null) => {
+        if (shareData) {
+          setData(shareData);
+        }
         setLoading(false);
       })
-      .catch((e) => {
-        setError(e.message);
+      .catch((fetchError) => {
+        setError(fetchError.message);
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    loadShareData();
   }, [token]);
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setVerifying(true);
+    setVerifyError(null);
+    try {
+      const response = await fetch(`/api/share/${token}/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+        credentials: "include",
+      });
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error(t("share.errors.rateLimit"));
+        }
+        let errorDetail = "Incorrect password";
+        try {
+          const errorPayload = await response.json();
+          if (errorPayload?.detail) {
+            errorDetail = errorPayload.detail;
+          }
+        } catch {}
+        throw new Error(errorDetail);
+      }
+      setPasswordRequired(false);
+      setLoading(true);
+      loadShareData();
+    } catch (err: any) {
+      setVerifyError(err.message);
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   useEffect(() => {
     if (!data || !map.current) return;
@@ -201,8 +258,7 @@ export default function PublicShare({ token }: Props) {
           <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "1rem" }}>
             <span>
               {new Date(data.started_at).toLocaleDateString()} -{" "}
-              {data.ended_at ? new Date(data.ended_at).toLocaleDateString() : "Ongoing"} •{" "}
-              {data.positions.length} points
+              {data.ended_at ? new Date(data.ended_at).toLocaleDateString() : "Ongoing"}
               {data.places.length > 0 && ` • ${data.places.length} place${data.places.length > 1 ? "s" : ""}`}
               {data.overnight_spots.length > 0 && ` • ${data.overnight_spots.length} overnight spot${data.overnight_spots.length > 1 ? "s" : ""}`}
             </span>
@@ -212,7 +268,7 @@ export default function PublicShare({ token }: Props) {
       <div style={{ flex: 1, position: "relative" }}>
         <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />
         
-        {loading && (
+        {loading && !passwordRequired && !error && (
           <div style={{
             position: "absolute",
             top: 0,
@@ -228,6 +284,191 @@ export default function PublicShare({ token }: Props) {
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>🗺️</div>
               <div>Loading shared trip...</div>
+            </div>
+          </div>
+        )}
+
+        {error && !passwordRequired && (
+          <div style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "var(--bg-0)",
+            zIndex: 1000,
+            padding: "1.5rem"
+          }}>
+            <div className="card" style={{
+              maxWidth: "400px",
+              width: "100%",
+              padding: "2.5rem 2rem",
+              textAlign: "center",
+              boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)",
+              borderRadius: "12px",
+              border: "1px solid var(--line)",
+              background: "var(--bg-1)"
+            }}>
+              <div style={{ position: "relative", marginBottom: "1.5rem", display: "inline-block" }}>
+                <img 
+                  src="/buteo-eagle-logo-lg.svg" 
+                  alt="TrackMy Buteo Logo" 
+                  style={{ width: "80px", height: "80px" }} 
+                />
+                <span style={{
+                  position: "absolute",
+                  bottom: "-5px",
+                  right: "-5px",
+                  fontSize: "1.5rem",
+                  background: "var(--bg-1)",
+                  borderRadius: "50%",
+                  padding: "2px",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "36px",
+                  height: "36px",
+                  lineHeight: "1"
+                }}>
+                  ⚠️
+                </span>
+              </div>
+              <h2 style={{ fontSize: "1.5rem", fontWeight: 700, margin: "0.5rem 0 0.25rem 0" }}>
+                Error Loading Trip
+              </h2>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", margin: 0 }}>
+                {error}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {passwordRequired && (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 10000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "var(--bg-0)",
+            padding: "1.5rem"
+          }}>
+            <div className="card" style={{
+              maxWidth: "400px",
+              width: "100%",
+              padding: "2.5rem 2rem",
+              textAlign: "center",
+              boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)",
+              borderRadius: "12px",
+              border: "1px solid var(--line)",
+              background: "var(--bg-1)"
+            }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "1.5rem" }}>
+                <div style={{ position: "relative", marginBottom: "1rem" }}>
+                  <img 
+                    src="/buteo-eagle-logo-lg.svg" 
+                    alt="TrackMy Buteo Logo" 
+                    style={{ width: "80px", height: "80px" }} 
+                  />
+                  <span style={{
+                    position: "absolute",
+                    bottom: "-5px",
+                    right: "-5px",
+                    fontSize: "1.5rem",
+                    background: "var(--bg-1)",
+                    borderRadius: "50%",
+                    padding: "2px",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "36px",
+                    height: "36px",
+                    lineHeight: "1"
+                  }}>
+                    🔒
+                  </span>
+                </div>
+                <h2 style={{ fontSize: "1.5rem", fontWeight: 700, margin: "0.5rem 0 0.25rem 0" }}>
+                  Password Required
+                </h2>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", margin: 0 }}>
+                  This shared trip is password protected. Please enter the password to view it.
+                </p>
+              </div>
+
+              <form onSubmit={handleVerify} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <div className="field" style={{ textAlign: "left" }}>
+                  <div className="password-input-wrapper">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter password"
+                      required
+                      autoFocus
+                      style={{
+                        width: "100%",
+                        padding: "0.75rem",
+                        paddingRight: "2.5rem",
+                        fontSize: "1rem",
+                        borderRadius: "4px",
+                        border: "1px solid var(--line)",
+                        background: "var(--bg-0)"
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle-btn"
+                      onClick={() => setShowPassword(!showPassword)}
+                      title={showPassword ? "Hide password" : "Show password"}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                    </button>
+                  </div>
+                </div>
+                
+                {verifyError && (
+                  <div style={{
+                    color: "var(--bad)",
+                    fontSize: "0.875rem",
+                    textAlign: "left",
+                    padding: "0.5rem",
+                    borderRadius: "4px",
+                    backgroundColor: "rgba(239, 68, 68, 0.1)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem"
+                  }}>
+                    <span>⚠️</span>{" "}<span>{verifyError}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={verifying}
+                  className="btn primary"
+                  style={{
+                    padding: "0.75rem",
+                    fontSize: "1rem",
+                    fontWeight: "bold",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    width: "100%"
+                  }}
+                >
+                  {verifying ? "Verifying..." : "View Shared Trip"}
+                </button>
+              </form>
             </div>
           </div>
         )}
@@ -257,5 +498,35 @@ export default function PublicShare({ token }: Props) {
         />
       </div>
     </div>
+  );
+}
+
+const iconProps = {
+  viewBox: "0 0 24 24",
+  width: 20,
+  height: 20,
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+  "aria-hidden": true,
+};
+
+function EyeIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
   );
 }

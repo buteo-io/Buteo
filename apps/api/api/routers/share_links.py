@@ -19,7 +19,7 @@ from tracker_core.store.models import (
     Trip,
     User,
 )
-from tracker_core.store.security import hash_share_token
+from tracker_core.store.security import hash_share_token, hash_password
 
 from ..deps import current_user, get_current_tenant_id, get_db, own_trip
 from ..schemas import UTCModel
@@ -40,6 +40,7 @@ class ShareLinkIn(BaseModel):
     delay_hours: int = Field(default=72, ge=0)
     blur_meters: int = Field(default=100, ge=0)
     is_active: bool = True
+    password: str | None = Field(default=None, max_length=256)
     place_ids: list[PrefixUUID] = Field(default_factory=list)
     overnight_spot_ids: list[PrefixUUID] = Field(default_factory=list)
 
@@ -57,6 +58,7 @@ class ShareLinkUpdateIn(BaseModel):
     delay_hours: int | None = Field(default=None, ge=0)
     blur_meters: int | None = Field(default=None, ge=0)
     is_active: bool | None = None
+    password: str | None = Field(default=None, max_length=256)
     place_ids: list[PrefixUUID] | None = None
     overnight_spot_ids: list[PrefixUUID] | None = None
 
@@ -73,6 +75,7 @@ class ShareLinkOut(UTCModel):
     delay_hours: int
     blur_meters: int
     is_active: bool
+    has_password: bool = False
     place_ids: list[PrefixUUID]
     overnight_spot_ids: list[PrefixUUID]
     created_at: datetime
@@ -99,6 +102,7 @@ def _out(link: ShareLink) -> ShareLinkOut:
         delay_hours=link.delay_hours,
         blur_meters=link.blur_meters,
         is_active=link.is_active,
+        has_password=link.password_hash is not None,
         place_ids=[p.public_id for p in link.selected_places],
         overnight_spot_ids=[s.public_id for s in link.selected_overnight_spots],
         created_at=link.created_at,
@@ -212,6 +216,11 @@ async def _apply_share_link_update(
         if data.is_active is None:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "is_active cannot be null")
         link.is_active = data.is_active
+    if "password" in fields:
+        if data.password is None or data.password == "":
+            link.password_hash = None
+        else:
+            link.password_hash = hash_password(data.password)
     if "place_ids" in fields:
         if data.place_ids is None:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "place_ids cannot be null")
@@ -287,6 +296,7 @@ async def create_share_link(
         delay_hours=data.delay_hours,
         blur_meters=data.blur_meters,
         is_active=data.is_active,
+        password_hash=hash_password(data.password) if data.password else None,
     )
 
     if data.place_ids:

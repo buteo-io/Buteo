@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 import { api, OvernightSpot, Place, ShareLink, Trip } from "../api";
 import { Select } from "../components/Select";
 
-type ShareLinkPayload = Omit<ShareLink, "id" | "created_at" | "updated_at">;
+type ShareLinkPayload = Omit<ShareLink, "id" | "created_at" | "updated_at"> & {
+  password?: string | null;
+};
 type ShareLinkPatch = Partial<ShareLinkPayload>;
 
 type Props = {
@@ -29,6 +31,8 @@ export function SharePanel({
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const isModalOpen = creating || editingId !== null;
+
   useEffect(() => {
     if (prefilledTripId) {
       setCreating(true);
@@ -41,6 +45,9 @@ export function SharePanel({
   const translateError = (msg: string): string => {
     if (msg.includes("Share link with this name already exists")) {
       return t("share.errors.duplicateName");
+    }
+    if (msg.includes("Rate limit exceeded")) {
+      return t("share.errors.rateLimit");
     }
     return msg;
   };
@@ -118,66 +125,81 @@ export function SharePanel({
 
   return (
     <div className="share-panel">
-
-      {creating && (
-        <div className="card share-form-card">
-          <ShareLinkForm
-            trips={trips}
-            prefilledTripId={prefilledTripId}
-            onSave={(data) => {
-              if (!data.trip_id || typeof data.is_active !== "boolean") {
-                onToast("Missing required fields for new link");
-                return;
-              }
-              void handleSaveNew(data as ShareLinkPayload);
-            }}
-            onCancel={handleCancelCreate}
-          />
+      {isModalOpen && (
+        <div className="modal-backdrop">
+          <div className="modal share-modal">
+            <div className="modal-header">
+              <h3>{editingId ? t("share.editLink") : t("share.newLink")}</h3>
+              <button type="button" className="modal-close" onClick={editingId ? handleCancelEdit : handleCancelCreate}>×</button>
+            </div>
+            <div className="modal-body">
+              {creating && (
+                <ShareLinkForm
+                  trips={trips}
+                  prefilledTripId={prefilledTripId}
+                  onSave={(data) => {
+                    if (!data.trip_id || typeof data.is_active !== "boolean") {
+                      onToast("Missing required fields for new link");
+                      return;
+                    }
+                    void handleSaveNew(data as ShareLinkPayload);
+                  }}
+                  onCancel={handleCancelCreate}
+                />
+              )}
+              {editingId && (
+                <ShareLinkForm
+                  link={shareLinks.find(l => l.id === editingId)}
+                  trips={trips}
+                  onSave={(data) => handleSaveEdit(editingId, data)}
+                  onCancel={handleCancelEdit}
+                  onDelete={handleDelete}
+                />
+              )}
+            </div>
+          </div>
         </div>
       )}
 
-      {shareLinks.length === 0 && !creating && (
+      {shareLinks.length === 0 && !isModalOpen && (
         <div className="empty">{t("share.noLinks")}</div>
       )}
 
       <ul className="list share-links-list">
         {shareLinks.map((link) => {
           const trip = trips.find((t) => t.id === link.trip_id);
-          const isEditing = editingId === link.id;
-
-          if (isEditing) {
-            return (
-              <li key={link.id} className="list-item share-link-item share-link-item-edit">
-                <ShareLinkForm
-                  link={link}
-                  trips={trips}
-                  onSave={(data) => handleSaveEdit(link.id, data)}
-                  onCancel={handleCancelEdit}
-                  onDelete={handleDelete}
-                />
-              </li>
-            );
-          }
 
           return (
             <li key={link.id} className="list-item share-link-item">
               <div className="share-link-main">
-                <div className="share-link-title-row">
-                    <strong>{link.name}</strong>
-                    {link.is_active ? (
-                      <span className="share-link-badge share-link-badge-active">
-                        {t("share.enabled")}
-                      </span>
-                    ) : (
-                      <span className="share-link-badge share-link-badge-disabled">
-                        {t("share.disabled")}
-                      </span>
-                    )}
-                  </div>
-                <div className="share-link-meta">{t("share.trip")}: {trip?.name || t("share.unknown")}</div>
-                {link.description && <div className="share-link-desc">{link.description}</div>}
+                <div className="share-link-title-content">
+                  <strong>{link.name}</strong>
+                  {link.is_active ? (
+                    <span className="share-link-badge share-link-badge-active">
+                      {t("share.enabled")}
+                    </span>
+                  ) : (
+                    <span className="share-link-badge share-link-badge-disabled">
+                      {t("share.disabled")}
+                    </span>
+                  )}
+                  {link.has_password && (
+                    <span className="share-link-badge share-link-badge-locked">
+                      🔒
+                    </span>
+                  )}
+                </div>
+                <div className="share-link-meta">
+                  {t("share.trip")}: {trip?.name || t("share.unknown")}
+                </div>
+                {link.description && (
+                  <div className="share-link-desc">{link.description}</div>
+                )}
                 <div className="share-link-stats">
-                  {t("share.delay")}: {link.delay_hours}h · {t("share.blur")}: {link.blur_meters}m · {t("share.places")}: {link.place_ids.length} · {t("share.overnights")}: {link.overnight_spot_ids.length}
+                  {t("share.delay")}: {link.delay_hours}h · {t("share.blur")}:{" "}
+                  {link.blur_meters}m · {t("share.places")}:{" "}
+                  {link.place_ids.length} · {t("share.overnights")}:{" "}
+                  {link.overnight_spot_ids.length}
                 </div>
               </div>
 
@@ -199,15 +221,6 @@ export function SharePanel({
                   aria-label="Edit"
                 >
                   <EditIcon />
-                </button>
-                <button
-                  type="button"
-                  className="icon-btn icon-btn-danger"
-                  onClick={() => handleDelete(link.id)}
-                  title="Delete"
-                  aria-label="Delete"
-                >
-                  <DeleteIcon />
                 </button>
               </div>
             </li>
@@ -242,6 +255,9 @@ function ShareLinkForm({ link, trips, prefilledTripId, onSave, onCancel, onDelet
   const [useBlur, setUseBlur] = useState(link ? link.blur_meters > 0 : true);
   const [blurMeters, setBlurMeters] = useState(link?.blur_meters ?? 500);
   const [isActive, setIsActive] = useState(link?.is_active ?? true);
+  const [usePassword, setUsePassword] = useState(!!link?.has_password);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [places, setPlaces] = useState<Place[]>([]);
   const [placesLoading, setPlacesLoading] = useState(false);
   const [shareAllPlaces, setShareAllPlaces] = useState(link ? link.place_ids.length > 0 : false);
@@ -299,6 +315,14 @@ function ShareLinkForm({ link, trips, prefilledTripId, onSave, onCancel, onDelet
       place_ids: placeIds,
       overnight_spot_ids: spotIds,
     };
+
+    if (usePassword) {
+      if (password) {
+        payload.password = password;
+      }
+    } else if (link?.has_password) {
+      payload.password = "";
+    }
 
     payload.trip_id = tripId;
     payload.is_active = isActive;
@@ -462,6 +486,53 @@ function ShareLinkForm({ link, trips, prefilledTripId, onSave, onCancel, onDelet
         <label className="share-inline-check">
           <input
             type="checkbox"
+            checked={usePassword}
+            onChange={(e) => {
+              setUsePassword(e.target.checked);
+              if (!e.target.checked) {
+                setPassword("");
+              }
+            }}
+          />
+          <span>{t("share.passwordProtect")}</span>
+        </label>
+
+        {usePassword && (
+          <div className="field share-delay-field">
+            <label className="field-label">
+              {link?.has_password ? t("share.newPassword") : t("share.password")}
+            </label>
+            <div className="password-input-wrapper">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={link?.has_password ? "•••••••• (leave blank to keep)" : "Enter password"}
+                maxLength={256}
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                title={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
+            {link?.has_password && (
+              <div className="field-hint" style={{ color: "var(--text-muted)", marginTop: "0.25rem" }}>
+                This link currently has password protection enabled. Enter a new password to change it, or uncheck password protection to remove it.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="card share-privacy-card">
+        <label className="share-inline-check">
+          <input
+            type="checkbox"
             checked={shareAllPlaces}
             onChange={toggleEnablePlaces}
           />
@@ -607,12 +678,21 @@ function EditIcon() {
   );
 }
 
-function DeleteIcon() {
+function EyeIcon() {
   return (
     <svg {...iconProps}>
-      <path d="M3 6h18" />
-      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
     </svg>
   );
 }
+
+function EyeOffIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  );
+}
+

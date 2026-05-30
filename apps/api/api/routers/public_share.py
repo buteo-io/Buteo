@@ -6,7 +6,9 @@ import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+import hmac
+import hashlib
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy import func, select
@@ -24,7 +26,7 @@ from tracker_core.store.models import (
     share_link_overnight_spots,
     share_link_places,
 )
-from tracker_core.store.security import hash_share_token
+from tracker_core.store.security import hash_share_token, verify_password
 
 from ..deps import get_db
 from ..limiter import limiter
@@ -153,6 +155,87 @@ def _effective_share_window(
     return start, end
 
 
+def _generate_unlock_cookie_value(link_public_id: str, expires_at: datetime) -> str:
+    timestamp_seconds = int(expires_at.timestamp())
+    payload_string = f"{link_public_id}:{timestamp_seconds}"
+    signature_hex = hmac.new(AppConfig.jwt_secret.encode(), payload_string.encode(), hashlib.sha256).hexdigest()
+    return f"{timestamp_seconds}:{signature_hex}"
+
+
+def _verify_unlock_cookie_value(link_public_id: str, cookie_value: str) -> bool:
+    try:
+        cookie_parts = cookie_value.split(":")
+        if len(cookie_parts) != 2:
+            return False
+        timestamp_string, signature_hex = cookie_parts
+        timestamp_seconds = int(timestamp_string)
+        if datetime.now(timezone.utc).timestamp() > timestamp_seconds:
+            return False
+        payload_string = f"{link_public_id}:{timestamp_seconds}"
+        expected_signature = hmac.new(AppConfig.jwt_secret.encode(), payload_string.encode(), hashlib.sha256).hexdigest()
+        return hmac.compare_digest(signature_hex, expected_signature)
+    except Exception:
+        return False
+
+
+def _check_share_password_auth(link: ShareLink, request: Request) -> None:
+    if link.password_hash is None:
+        return
+    cookie_name = f"share_unlock_{link.public_id}"
+    cookie_value = request.cookies.get(cookie_name)
+    if not cookie_value or not _verify_unlock_cookie_value(link.public_id, cookie_value):
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            detail="PASSWORD_REQUIRED"
+        )
+
+
+class VerifyPasswordIn(BaseModel):
+    password: str
+
+
+@router.post("/share/{token}/verify")
+@limiter.limit("5/minute")
+async def verify_share_password(
+    request: Request,
+    token: str,
+    body: VerifyPasswordIn,
+    db: AsyncSession = Depends(get_db),
+):
+    """Verify share link password and return secure cookie if correct."""
+    _ = request
+    select_statement = select(ShareLink).where(ShareLink.token == hash_share_token(token))
+    database_result = await db.execute(select_statement)
+    link = database_result.scalar_one_or_none()
+
+    if not link or not link.is_active:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "Share link not found or inactive"
+        )
+
+    if link.password_hash is None:
+        return {"ok": True}
+
+    if not verify_password(body.password, link.password_hash):
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password"
+        )
+
+    response_obj = Response(content='{"ok": true}', media_type="application/json")
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    response_obj.set_cookie(
+        key=f"share_unlock_{link.public_id}",
+        value=_generate_unlock_cookie_value(link.public_id, expires_at),
+        max_age=7 * 24 * 60 * 60,
+        httponly=True,
+        secure=AppConfig.auth_cookie_secure and not AppConfig.dev_insecure_cookies,
+        samesite="lax",
+        path="/",
+    )
+    return response_obj
+
+
 @router.get("/share/{token}", response_model=PublicShareOut)
 @limiter.limit("30/minute;300/hour")
 async def get_public_share(
@@ -161,7 +244,6 @@ async def get_public_share(
     db: AsyncSession = Depends(get_db),
 ) -> PublicShareOut:
     """Get public share data by token (no auth required)."""
-    _ = request
     stmt = (
         select(ShareLink)
         .options(
@@ -178,6 +260,8 @@ async def get_public_share(
         raise HTTPException(
             status.HTTP_404_NOT_FOUND, "Share link not found or inactive"
         )
+
+    _check_share_password_auth(link, request)
 
     trip = link.trip
     now_utc = datetime.now(timezone.utc)
@@ -335,7 +419,7 @@ async def get_public_share(
 
 
 @router.get("/share/{token}/media/{media_id}")
-@limiter.limit("30/minute;300/hour")
+@limiter.limit("200/minute;600/hour")
 async def serve_share_media(
     request: Request,
     token: str,
@@ -343,7 +427,6 @@ async def serve_share_media(
     db: AsyncSession = Depends(get_db),
 ):
     """Serve media for a public share (no auth required)."""
-    _ = request
     stmt = (
         select(ShareLink)
         .options(
@@ -358,6 +441,8 @@ async def serve_share_media(
         raise HTTPException(
             status.HTTP_404_NOT_FOUND, "Share link not found or inactive"
         )
+
+    _check_share_password_auth(link, request)
 
     # Check PlaceMedia first
     media_stmt = await db.execute(

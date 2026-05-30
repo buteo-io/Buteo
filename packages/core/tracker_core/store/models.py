@@ -448,6 +448,9 @@ class ShareLink(Base):
     # Active (publicly accessible) vs paused (configured but returns 404)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("1"))
 
+    # Password protection (nullable)
+    password_hash: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

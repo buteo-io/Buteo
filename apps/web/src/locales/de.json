@@ -114,6 +114,9 @@
     "delayHint": "Letzte N Stunden ab jetzt ausschließen (Standard 72 = 3 Tage).",
     "blurLocation": "Standort unscharf machen",
     "blurHint": "Koordinatengenauigkeit für Datenschutz reduzieren.",
+    "passwordProtect": "Passwortgeschützt",
+    "password": "Passwort",
+    "newPassword": "Neues Passwort",
     "shareConnectedPlaces": "Verknüpfte Orte teilen",
     "allPlaces": "Alle Orte",
     "loadingPlaces": "Orte laden...",
@@ -126,7 +129,8 @@
     "createLink": "Freigabelink erstellen",
     "updateLink": "Freigabelink aktualisieren",
     "errors": {
-      "duplicateName": "Ein Freigabelink mit diesem Namen existiert bereits."
+      "duplicateName": "Ein Freigabelink mit diesem Namen existiert bereits.",
+      "rateLimit": "Zu viele Versuche. Bitte warte einen Moment und versuche es erneut."
     }
   },
   "export": {
@@ -165,7 +169,7 @@
     "start": "Reise starten",
     "end": "Reise beenden",
     "delete": "Reise löschen",
-    "confirmDelete": "Diese Reise löschen?"
+    "confirmDelete": "Reise \"{{name}}\" löschen?"
   },
   "common": {
     "save": "Speichern",
