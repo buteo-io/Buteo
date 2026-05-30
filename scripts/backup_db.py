@@ -37,6 +37,7 @@ import os
 import shutil
 import sqlite3
 import subprocess
+import tarfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -93,8 +94,8 @@ def get_sqlite_dbs_to_backup(
         if db_file.exists():
             dbs.append((name, db_file))
 
-    # All dynamic tenant databases (tenant_{tenant_id}.db)
-    for p in base_dir.glob("tenant_*.db"):
+    # All dynamic tenant databases (tnt{tenant_id}.db)
+    for p in base_dir.glob("tnt*.db"):
         dbs.append((p.stem, p))
 
     # Ensure database_url database is included if it exists and wasn't added

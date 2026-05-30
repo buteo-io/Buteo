@@ -1,12 +1,12 @@
-# TrackMy Production Deployment Guide
+# Buteo Production Deployment Guide
 
-This guide describes how to run and secure TrackMy in a production environment. 
+This guide describes how to run and secure Buteo in a production environment. 
 
 ---
 
 ## 1. Prerequisites
 
-Before deploying TrackMy to a production server, ensure you have the following ready:
+Before deploying Buteo to a production server, ensure you have the following ready:
 
 - **A Virtual Private Server (VPS)** or dedicated physical server with Linux (Ubuntu 22.04+ recommended).
 - **Docker & Docker Compose** installed.
@@ -16,7 +16,7 @@ Before deploying TrackMy to a production server, ensure you have the following r
 - **Traefik Reverse Proxy** running on the host as your edge router (or another reverse proxy like Nginx/Caddy configured to route TLS traffic).
 
 ### Network Configuration
-TrackMy's production `docker-compose.yml` relies on an external Docker network named `traefik`. Create it prior to launching the stack:
+Buteo's production `docker-compose.yml` relies on an external Docker network named `traefik`. Create it prior to launching the stack:
 ```bash
 docker network create traefik
 ```
@@ -28,7 +28,7 @@ docker network create traefik
 A typical production directory layout on the server filesystem:
 
 ```text
-/opt/trackmy/
+/opt/buteo/
 ├── .env                  # Secrets and configuration parameters
 ├── docker-compose.yml    # Standard stack orchestrator
 └── data/                 # Mounted volume directory (automatically created)
@@ -36,7 +36,7 @@ A typical production directory layout on the server filesystem:
     ├── tenant_foo.db     # Isolated database for tenant "foo"
     ├── tenant_bar.db     # Isolated database for tenant "bar"
     ├── backups/          # Database backup target directory
-    └── media/            # Uploaded trip and place images/attachments
+    └── uploads/          # Uploaded trip and place images/attachments
 ```
 
 ---
@@ -75,7 +75,7 @@ FRONTEND_PORT=5124
 INGEST_CODEC8_PORT=5027
 INGEST_OSMAND_PORT=8766
 ```
-*(For complete configuration options, consult `@/Users/noahm/private/trackmy-core/docs/environment_variables.md`.)*
+*(For complete configuration options, consult `@/Users/noahm/private/Buteo/docs/environment_variables.md`.)*
 
 ---
 
@@ -95,7 +95,7 @@ docker compose ps
 
 ## 5. Bootstrap Administrative Access
 
-Since TrackMy does not open a public registration endpoint for security, your first admin user and tracking device must be provisioned via the command-line interface.
+Since Buteo does not open a public registration endpoint for security, your first admin user and tracking device must be provisioned via the command-line interface.
 
 ### Step 1: Create Admin User Account
 ```bash
@@ -126,7 +126,7 @@ The HTTP and TCP ingest ports (`8766` and `5027` respectively) do not authorize 
 The `/share/{token}` public view endpoints are protected by slowapi rate limiters (by default: 30 requests/minute, 300 requests/hour per IP). Ensure your reverse proxy passes the correct client IP header (`X-Forwarded-For` or `X-Real-IP`) so limits are applied per remote client rather than to the gateway.
 
 ### C. Public Share Hardening & Redacted Logs
-- TrackMy redacts raw shared-link paths in its API application logs.
+- Buteo redacts raw shared-link paths in its API application logs.
 - The Nginx configuration templates for the frontend are pre-configured to suppress request logging for public-share locations (`/api/share/*`) to maintain the secrecy of active tokens.
 
 ---
@@ -136,7 +136,7 @@ The `/share/{token}` public view endpoints are protected by slowapi rate limiter
 Location histories accumulate irreplaceable travel records. Back up your dataset regularly.
 
 ### SQLite Backups (Automatic & Consistent)
-TrackMy includes an integrated backup utility that creates consistent, online backups of SQLite without locking operations:
+Buteo includes an integrated backup utility that creates consistent, online backups of SQLite without locking operations:
 ```bash
 docker compose run --rm api python scripts/backup_db.py
 ```
@@ -145,7 +145,7 @@ This utility automatically detects and hot-copies the central `identity.db` and 
 **Recommended Crontab Configuration:**
 Install a cronjob on the Docker host to back up your database every night at midnight:
 ```cron
-0 0 * * * cd /opt/trackmy && /usr/bin/docker compose run --rm api python scripts/backup_db.py > /dev/null 2>&1
+0 0 * * * cd /opt/buteo && /usr/bin/docker compose run --rm api python scripts/backup_db.py > /dev/null 2>&1
 ```
 
 ---
@@ -153,7 +153,7 @@ Install a cronjob on the Docker host to back up your database every night at mid
 ## 8. Troubleshooting & Diagnostics
 
 ### Viewing Logs
-TrackMy services use standardized JSON or clean structured logs depending on configuration.
+Buteo services use standardized JSON or clean structured logs depending on configuration.
 ```bash
 # View backend API logs
 docker compose logs -f api

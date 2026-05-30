@@ -92,6 +92,7 @@ export default function App() {
   // Selected trip drives the optional "only places linked to this trip"
   // filter on the Places panel + map.
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [expandedTripId, setExpandedTripId] = useState<string | null>(null);
   const [prefilledTripId, setPrefilledTripId] = useState<string | null>(null);
   const [prefilledShareLinkId, setPrefilledShareLinkId] = useState<string | null>(null);
   const [placesFilterByTrip, setPlacesFilterByTrip] = useState(false);
@@ -191,6 +192,7 @@ export default function App() {
   useEffect(() => {
     if (!device) return;
     setSelectedTripId(null);
+    setExpandedTripId(null);
     setPlacesFilterByTrip(false);
     map.current?.setOvernightSpots([]);
     map.current?.clearHistory();
@@ -233,6 +235,7 @@ export default function App() {
       map.current?.setDevice(null);
     } else {
       setSelectedTripId(null);
+      setExpandedTripId(null);
       setPlacesFilterByTrip(false);
       map.current?.setOvernightSpots([]);
     }
@@ -334,6 +337,7 @@ export default function App() {
 
   const onApplyRange = async () => {
     setSelectedTripId(null);
+    setExpandedTripId(null);
     setPlacesFilterByTrip(false);
     map.current?.setOvernightSpots([]);
     setMode("history");
@@ -450,22 +454,23 @@ export default function App() {
             devices={devices}
             places={places}
             shareLinks={shareLinks}
-            selectedTripId={selectedTripId}
+            selectedTripId={expandedTripId}
             filterByTrip={placesFilterByTrip}
             onToggleFilterByTrip={() => setPlacesFilterByTrip((v) => !v)}
             onClose={() => {
-              setSelectedTripId(null);
-              setPlacesFilterByTrip(false);
-              map.current?.setOvernightSpots([]);
+              setExpandedTripId(null);
             }}
             onFlyToPlace={(p) => {
               map.current?.flyTo(p.lon, p.lat, 14);
               closeOverlay();
             }}
-            onToggleExpand={(trip) => { setSelectedTripId(trip.id); setPlacesFilterByTrip(true); }}
+            onToggleExpand={(trip) => {
+              setExpandedTripId((prev) => (prev === trip.id ? null : trip.id));
+            }}
             onOpen={async (trip) => {
               try {
                 setSelectedTripId(trip.id);
+                setExpandedTripId(trip.id);
                 setPlacesFilterByTrip(true);
                 setMode("history");
                 setRange({
@@ -507,6 +512,9 @@ export default function App() {
                   setHistoryPts([]);
                   map.current?.setOvernightSpots([]);
                   map.current?.clearHistory();
+                }
+                if (expandedTripId === id) {
+                  setExpandedTripId(null);
                 }
                 void refreshTrips();
               } catch (e: any) {

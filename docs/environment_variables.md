@@ -1,6 +1,6 @@
-# TrackMy Environment Variable Reference
+# Buteo Environment Variable Reference
 
-All operational aspects of the TrackMy application—security parameters, database settings, port binds, file attachment sizing limits, and CORS policies—are configured using environment variables. 
+All operational aspects of the Buteo application—security parameters, database settings, port binds, file attachment sizing limits, and CORS policies—are configured using environment variables. 
 
 On startup, Pydantic-Settings parses variables from the host environment, fallback `.env` files, or Docker Compose overrides.
 
@@ -32,7 +32,7 @@ On startup, Pydantic-Settings parses variables from the host environment, fallba
 
 ## 3. Database Persistence
 
-TrackMy utilizes a highly secure multi-tenant database configuration with one database per tenant/user. It automatically configures the correct database engine based on `DATABASE_TYPE`.
+Buteo utilizes a highly secure multi-tenant database configuration with one database per tenant/user. It automatically configures the correct database engine based on `DATABASE_TYPE`.
 
 - **Option A (SQLite - Default)**: Active when `DATABASE_TYPE` is `"sqlite"`. Creates a central `identity.db` in `DATA_DIR` and individual isolated `tenant_{tenant_id}.db` databases.
 - **Option B (PostgreSQL)**: Active when `DATABASE_TYPE` is `"postgres"`. Creates a central `tracker_identity` catalog database and individual isolated `tracker_tenant_{tenant_id}` databases on the target host.

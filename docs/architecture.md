@@ -1,12 +1,12 @@
-# TrackMy System Architecture
+# Buteo System Architecture
 
-This document details the system design, component boundaries, data flow pipelines, and database relations for the TrackMy platform.
+This document details the system design, component boundaries, data flow pipelines, and database relations for the Buteo platform.
 
 ---
 
 ## 1. System Topology & Component Overview
 
-TrackMy is a modular open-core platform separated into three principal services (`apps/api`, `apps/ingest`, `apps/web`) and a shared domain package (`packages/core/tracker_core`).
+Buteo is a modular open-core platform separated into three principal services (`apps/api`, `apps/ingest`, `apps/web`) and a shared domain package (`packages/core/tracker_core`).
 
 ```mermaid
 graph TD
@@ -80,7 +80,7 @@ The monorepo centers around `tracker_core` to prevent duplication of logic acros
 
 ### A. Location Ingest Data Flow
 
-TrackMy supports high-frequency TCP stream tracking alongside intermittent HTTP pushing. Regardless of source protocol, data undergoes consistent filtering and parsing prior to persistence.
+Buteo supports high-frequency TCP stream tracking alongside intermittent HTTP pushing. Regardless of source protocol, data undergoes consistent filtering and parsing prior to persistence.
 
 ```mermaid
 sequenceDiagram
@@ -148,7 +148,7 @@ sequenceDiagram
 
 ## 4. Database Schema (Entity Relationship Diagram)
 
-TrackMy handles multiple trackers across different real-world entities (e.g., vehicles, individuals, pets). Below is the logical data model schema.
+Buteo handles multiple trackers across different real-world entities (e.g., vehicles, individuals, pets). Below is the logical data model schema.
 
 ```mermaid
 erDiagram

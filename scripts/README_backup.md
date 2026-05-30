@@ -1,15 +1,15 @@
 # Database Backup (`backup_db.py`)
 
-GFS-style backup script for trackmy-core. Works with both SQLite and PostgreSQL —
+GFS-style backup script for Buteo. Works with both SQLite and PostgreSQL —
 detected automatically from `DATABASE_URL` (same logic as the app).
 
 ## Retention
 
 | Tier    | Location         | Filename example                  | Kept      |
 |---------|------------------|-----------------------------------|-----------|
-| Hourly  | `hourly/`        | `identity_2026-05-12_14-00.db`, `tenant_foo_2026-05-12_14-00.db` | 7 days    |
-| Daily   | `daily/`         | `identity_2026-05-12.db`, `tenant_foo_2026-05-12.db`              | 30 days   |
-| Weekly  | `weekly/`        | `identity_2026-W19.db`, `tenant_foo_2026-W19.db`                | forever   |
+| Hourly  | `hourly/`        | `identity_2026-05-12_14-00.db`, `tnttnt_foo_2026-05-12_14-00.db` | 7 days    |
+| Daily   | `daily/`         | `identity_2026-05-12.db`, `tnttnt_foo_2026-05-12.db`              | 30 days   |
+| Weekly  | `weekly/`        | `identity_2026-W19.db`, `tnttnt_foo_2026-W19.db`                | forever   |
 
 PostgreSQL dumps use `.pgdump` instead of `.db`.
 
@@ -35,8 +35,8 @@ Layout inside `DATA_DIR`:
 ```
 DATA_DIR/
   identity.db         ← Central identity database
-  tenant_foo.db       ← Tenant "foo" private database
-  tenant_bar.db       ← Tenant "bar" private database
+  tntfoo.db       ← Tenant "foo" private database
+  tntbar.db       ← Tenant "bar" private database
   backups/
     hourly/
     daily/
@@ -48,7 +48,7 @@ DATA_DIR/
 ### 2. Create the venv
 
 ```bash
-cd /path/to/trackmy-core/scripts
+cd /path/to/Buteo/scripts
 python3 -m venv .venv
 .venv/bin/pip install -r requirements_backup.txt
 ```
@@ -56,8 +56,8 @@ python3 -m venv .venv
 ### 3. Dry run (verify before scheduling)
 
 ```bash
-/path/to/trackmy-core/scripts/.venv/bin/python \
-    /path/to/trackmy-core/scripts/backup_db.py --dry-run
+/path/to/Buteo/scripts/.venv/bin/python \
+    /path/to/Buteo/scripts/backup_db.py --dry-run
 ```
 
 ### 4. Schedule with cron (every hour)
@@ -69,8 +69,8 @@ crontab -e
 Add:
 
 ```cron
-0 * * * * /path/to/trackmy-core/scripts/.venv/bin/python \
-    /path/to/trackmy-core/scripts/backup_db.py \
+0 * * * * /path/to/Buteo/scripts/.venv/bin/python \
+    /path/to/Buteo/scripts/backup_db.py \
     >> /var/log/tracker-backup.log 2>&1
 ```
 

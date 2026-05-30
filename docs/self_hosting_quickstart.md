@@ -1,6 +1,6 @@
 # Self-Hosting Quickstart Guide
 
-This guide gets you from a fresh, blank Linux VPS to a fully functional, production-ready TrackMy GPS logging system in under 15 minutes.
+This guide gets you from a fresh, blank Linux VPS to a fully functional, production-ready Buteo GPS logging system in under 15 minutes.
 
 ---
 
@@ -38,119 +38,31 @@ sudo usermod -aG docker $USER
 
 Create a dedicated application directory:
 ```bash
-sudo mkdir -p /opt/trackmy
-sudo chown -R $USER:$USER /opt/trackmy
-cd /opt/trackmy
+sudo mkdir -p /opt/buteo
+sudo chown -R $USER:$USER /opt/buteo
+cd /opt/buteo
 ```
 
-### 1. Create a `.env` File
-Create a `.env` file (`nano .env`) and populate it with your domain names and secrets:
+### 1. Configure the `.env` File
 
-```ini
-# Generate a secret: run `openssl rand -hex 32` on your local terminal
-JWT_SECRET=f3a8b4c731e9c2f6d0a7a3b4c5e6f1a2a3b4c5e6f7a8b9c0d1e2f3a4b5c6d7e8
-
-# Domain names
-DOMAIN=track.yourdomain.com
-API_DOMAIN=api.track.yourdomain.com
-
-# Persist to local data directory
-DATA_DIR=/opt/trackmy/data
-
-# Secure production cookies
-AUTH_COOKIE_SECURE=true
-DEV_INSECURE_COOKIES=false
-
-# CORS Configuration
-CORS_ORIGINS=https://track.yourdomain.com
+Copy the template `.env.example` from the repository root to `/opt/buteo/.env`:
+```bash
+# Assuming you cloned or copied the repo contents
+cp .env.example /opt/buteo/.env
 ```
+Edit `.env` to set your domains, database type, and secrets. Crucial variables to set:
+- **JWT_SECRET**: Generate with `openssl rand -hex 32` on your terminal.
+- **DOMAIN** / **API_DOMAIN**: Set to your registered tracking domains.
+- **DATA_DIR**: Set to your host data directory (e.g., `/opt/buteo/data`).
+- **DATABASE_TYPE**: Set to `sqlite` or `postgres`.
 
-### 2. Create the `docker-compose.yml` File
-Create a `docker-compose.yml` file (`nano docker-compose.yml`) containing the production topology. Here is the standard production configuration utilizing Traefik for automatic Let's Encrypt TLS:
+### 2. Copy the `docker-compose.yml` File
 
-```yaml
-version: '3.8'
+Copy the production-ready `docker-compose.yml` from the repository root into `/opt/buteo/`.
 
-networks:
-  traefik:
-    external: true
+The standard configuration is set up to utilize Traefik for automatic Let's Encrypt TLS certificate generation, routing `DOMAIN` to the frontend, `API_DOMAIN` to the API, and exposing tracking receiver ports (e.g. `5027`, `8766`).
 
-services:
-  # Traefik Reverse Proxy & TLS Provisioner
-  traefik:
-    image: traefik:v2.10
-    container_name: traefik
-    restart: always
-    command:
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.email=your-email@yourdomain.com"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "./letsencrypt:/letsencrypt"
-    networks:
-      - traefik
-
-  # Web UI (React SPA served by Nginx)
-  frontend:
-    image: ghcr.io/mrtnz/trackmy-web:latest  # Or build locally if self-compiling
-    container_name: trackmy-frontend
-    restart: always
-    environment:
-      - API_UPSTREAM=api:8765
-    networks:
-      - traefik
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.frontend.entrypoints=websecure"
-      - "traefik.http.routers.frontend.tls=true"
-      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
-
-  # Core API Server
-  api:
-    image: ghcr.io/mrtnz/trackmy-api:latest  # Or build locally
-    container_name: trackmy-api
-    restart: always
-    env_file: .env
-    environment:
-      - DATA_DIR=/data
-    volumes:
-      - "./data:/data"
-    networks:
-      - traefik
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=Host(`${API_DOMAIN}`)"
-      - "traefik.http.routers.api.entrypoints=websecure"
-      - "traefik.http.routers.api.tls=true"
-      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
-
-  # GPS Ingest Listeners (TCP + HTTP)
-  ingest:
-    image: ghcr.io/mrtnz/trackmy-ingest:latest  # Or build locally
-    container_name: trackmy-ingest
-    restart: always
-    env_file: .env
-    environment:
-      - DATA_DIR=/data
-    volumes:
-      - "./data:/data"
-    ports:
-      - "5027:5027"  # Codec 8 TCP
-      - "8766:8766"  # OsmAnd HTTP
-    networks:
-      - traefik
-```
+A reverse proxy is recommended for the ingest service (parses incoming GPS data from tracking devices).
 
 ---
 
