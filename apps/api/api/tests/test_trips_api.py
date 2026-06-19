@@ -334,3 +334,87 @@ async def test_trip_gpx_export(authed: httpx.AsyncClient, account: Account):
     assert "time_id,lat,lon,altitude,speed_kmh,satellites" in csv_text
     assert "52.0,13.0" in csv_text
     assert "450.0" in csv_text
+
+
+async def _seed_trip(device_id: int) -> str:
+    """Insert a trip directly into the DB and return its public_id."""
+    from tracker_core.store.models import Trip
+
+    start = datetime(2025, 7, 1, 8, tzinfo=timezone.utc)
+    ended = start + timedelta(hours=3)
+    async with SessionLocal() as s:
+        t = Trip(
+            device_id=device_id,
+            name="Pre-seeded trip",
+            started_at=start,
+            ended_at=ended,
+        )
+        s.add(t)
+        await s.commit()
+        await s.refresh(t)
+        return str(t.public_id)
+
+
+async def test_read_only_account_blocked_from_mutations(
+    read_only_authed: httpx.AsyncClient, account: Account
+):
+    """read_only feature flag → 403 on every mutating endpoint; reads still work.
+
+    The trip is seeded via direct DB insert (before the read_only flag is applied
+    by the fixture) so we never need an authenticated writable HTTP client here.
+    """
+    trip_id = await _seed_trip(account.device_id)
+    c = read_only_authed
+
+    start = datetime(2025, 6, 1, 8, tzinfo=timezone.utc)
+    ended = start + timedelta(hours=2)
+    trip_payload = {
+        "device_id": str(account.device_pid),
+        "name": "Demo trip",
+        "started_at": start.isoformat(),
+        "ended_at": ended.isoformat(),
+    }
+
+    # --- trips: writes blocked, reads allowed ---
+    r = await c.post("/trips", json=trip_payload)
+    assert r.status_code == 403, r.text
+
+    r = await c.patch(f"/trips/{trip_id}", json={"name": "Renamed"})
+    assert r.status_code == 403
+
+    r = await c.post(f"/trips/{trip_id}/end")
+    assert r.status_code == 403
+
+    r = await c.delete(f"/trips/{trip_id}")
+    assert r.status_code == 403
+
+    r = await c.get("/trips")
+    assert r.status_code == 200
+
+    # --- places: writes blocked, reads allowed ---
+    place_payload = {
+        "name": "Camp spot",
+        "lon": 13.4,
+        "lat": 52.5,
+        "place_category": "Camping",
+        "trip_ids": [],
+    }
+    r = await c.post("/places", json=place_payload)
+    assert r.status_code == 403
+
+    r = await c.get("/places")
+    assert r.status_code == 200
+
+    # --- overnight spots: detect is automatic (not user-initiated write), allowed ---
+    r = await c.post(f"/trips/{trip_id}/overnight-spots/detect")
+    assert r.status_code == 200
+
+    r = await c.get(f"/trips/{trip_id}/overnight-spots")
+    assert r.status_code == 200
+
+    # --- share links: writes blocked, reads allowed ---
+    r = await c.post("/share-links", json={"trip_id": trip_id, "name": "Public share"})
+    assert r.status_code == 403
+
+    r = await c.get("/share-links")
+    assert r.status_code == 200

@@ -15,13 +15,14 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from tracker_core import analytics
+from tracker_core.features import Feature
 from tracker_core.internal.appctx.config import AppConfig
 from tracker_core.queries import positions_in_window_capped
 from tracker_core.store.ids import PrefixUUID
 from tracker_core.store.models import Device, Entity, OvernightSpot, Place, Trip, User
 from tracker_core.store.models import place_trips as place_trips_t
 
-from ..deps import current_user, get_db, own_device, own_trip
+from ..deps import current_user, get_db, own_device, own_trip, require_feature
 from ..schemas import PositionOut, UTCModel
 from .analytics import _attach
 from .places import PlaceOut
@@ -144,6 +145,7 @@ async def create_trip(
     body: TripIn,
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ):
     """Create a new trip on one of the caller's devices.
 
@@ -175,6 +177,7 @@ async def update_trip(
     body: TripUpdateIn,
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ):
     """Partial update of a trip. Only the fields present in the body change.
 
@@ -229,6 +232,7 @@ async def end_trip(
     body: TripEndIn | None = None,
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ):
     """Close an ongoing trip by setting ``ended_at``.
 
@@ -260,6 +264,7 @@ async def delete_trip(
     trip_id: PrefixUUID,
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ):
     """Delete a trip. 204 on success, 404 if not owned."""
     t, _ = await own_trip(db, user, trip_id)

@@ -111,6 +111,41 @@ docker compose run --rm api python -m tracker_core.cli.manage create-device \
 ```
 *Note: The `--imei` parameter must match the unique hardware identifier sent by your GPS tracking client.*
 
+### Step 3: (Optional) Read-Only Demo Account
+
+All accounts are created with the `can_write` feature flag enabled by default. To host a publicly shared demo account — where anyone can log in and explore the UI without being able to modify data — **revoke** the `can_write` flag after seeding:
+
+```bash
+# Create the demo account
+docker compose run --rm api python -m tracker_core.cli.manage create-user \
+  --email demo@example.com --password "PublicDemoPassword"
+
+# Seed demo data, then lock the account to read-only
+docker compose run --rm api python -m tracker_core.cli.manage features revoke \
+  --email demo@example.com --feature can_write
+```
+
+A read-only account can authenticate and browse all data normally. Every mutating request (POST/PATCH/DELETE on trips, places, overnight spots, share links) returns **403 Forbidden**. GPS ingest is also rejected for tenants without `can_write`.
+
+To restore write access:
+```bash
+docker compose run --rm api python -m tracker_core.cli.manage features grant \
+  --email demo@example.com --feature can_write
+```
+
+To inspect the active flags on any account:
+```bash
+docker compose run --rm api python -m tracker_core.cli.manage features list \
+  --email demo@example.com
+```
+
+To see all valid feature flag names:
+```bash
+docker compose run --rm api python -m tracker_core.cli.manage features available
+```
+
+> **Note:** Both `grant` and `revoke` invalidate all existing sessions for that account (token version is bumped). The user must log in again to receive a JWT with the updated flags.
+
 ---
 
 ## 6. Security Hardening

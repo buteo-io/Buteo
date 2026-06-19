@@ -12,13 +12,13 @@ import logging
 import shutil
 import uuid
 from pathlib import Path
-from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from tracker_core.features import Feature
 from tracker_core.internal.appctx.config import AppConfig
 from tracker_core.store.ids import PrefixUUID
 from tracker_core.store.models import (
@@ -30,7 +30,7 @@ from tracker_core.store.models import (
     User,
 )
 
-from ..deps import current_user, get_db, own_place
+from ..deps import current_user, get_db, own_place, require_feature
 from ..limiter import limiter
 from ..media_utils import (
     ALLOWED_IMAGE_MIMES,
@@ -169,6 +169,7 @@ async def create_place(
     body: PlaceIn,
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ):
     """Create a place for the caller. Coordinates are validated by Pydantic."""
     trips = await _resolve_owned_trips(db, user, body.trip_ids)
@@ -192,6 +193,7 @@ async def update_place(
     body: PlaceIn,
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ):
     """Replace a place's fields. 404 if the place is not owned by the caller."""
     p = await own_place(db, user, place_id)
@@ -213,6 +215,7 @@ async def delete_place(
     place_id: PrefixUUID,
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ):
     """Delete a place. Idempotent: returns 204 whether found or not is rejected with 404."""
     p = await own_place(db, user, place_id)
@@ -255,6 +258,7 @@ async def upload_place_media(
     file: UploadFile = File(...),
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ):
     """Upload media (image/video) to a place."""
     p = await own_place(db, user, place_id)
@@ -331,6 +335,7 @@ async def delete_place_media(
     media_id: PrefixUUID,
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ):
     """Delete a media item from a place."""
     p = await own_place(db, user, place_id)

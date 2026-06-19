@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from tracker_core.features import Feature
 from tracker_core.store.ids import PrefixUUID
 from tracker_core.store.models import (
     OvernightSpot,
@@ -19,9 +20,15 @@ from tracker_core.store.models import (
     Trip,
     User,
 )
-from tracker_core.store.security import hash_share_token, hash_password
+from tracker_core.store.security import hash_password, hash_share_token
 
-from ..deps import current_user, get_current_tenant_id, get_db, own_trip
+from ..deps import (
+    current_user,
+    get_current_tenant_id,
+    get_db,
+    own_trip,
+    require_feature,
+)
 from ..schemas import UTCModel
 
 logger = logging.getLogger(__name__)
@@ -267,6 +274,7 @@ async def create_share_link(
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(get_current_tenant_id),
+    _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ) -> ShareLinkSecretOut:
     """Create new share link for a trip."""
     trip, _ = await own_trip(db, user, data.trip_id)
@@ -339,6 +347,7 @@ async def update_share_link(
     data: ShareLinkUpdateIn,
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ) -> ShareLinkOut:
     """Update share link."""
     stmt = (
@@ -375,6 +384,7 @@ async def rotate_share_link(
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
     tenant_id: str = Depends(get_current_tenant_id),
+    _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ) -> ShareLinkSecretOut:
     """Rotate share token and return new clear-text token once."""
     stmt = (
@@ -410,6 +420,7 @@ async def revoke_share_link(
     link_id: PrefixUUID,
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ) -> None:
     """Revoke share link by setting it inactive."""
     stmt = select(ShareLink).where(ShareLink.public_id == link_id)
@@ -432,6 +443,7 @@ async def delete_share_link(
     link_id: PrefixUUID,
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ) -> None:
     """Delete share link."""
     stmt = select(ShareLink).where(ShareLink.public_id == link_id)

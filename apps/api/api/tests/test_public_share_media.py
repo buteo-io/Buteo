@@ -53,6 +53,7 @@ async def _provision_no_underscores(
             password_hash=hash_password(password),
             database_type="sqlite",
             database_name=f"test_tenant_{tenant_id}.db",
+            features=["can_write"],
         )
         id_s.add(tenant)
         await id_s.commit()
@@ -439,7 +440,12 @@ async def test_public_share_password_protection(
     # 2. Add an overnight spot
     async with SessionLocal() as s:
         from tracker_core.store.models import Trip as TripModel
-        trip_db = (await s.execute(select(TripModel).where(TripModel.public_id == trip_public_id))).scalar_one()
+
+        trip_db = (
+            await s.execute(
+                select(TripModel).where(TripModel.public_id == trip_public_id)
+            )
+        ).scalar_one()
         spot = OvernightSpot(
             user_id=account.user_id,
             trip_id=trip_db.id,
@@ -457,7 +463,9 @@ async def test_public_share_password_protection(
     # 3. Upload media for this spot
     png_content = b"\x89PNG\r\n\x1a\n"
     files = {"file": ("spot.png", png_content, "image/png")}
-    r_upload = await authed.post(f"/overnight-spots/{spot_public_id}/media", files=files)
+    r_upload = await authed.post(
+        f"/overnight-spots/{spot_public_id}/media", files=files
+    )
     assert r_upload.status_code == 200
     media_id = r_upload.json()["id"]
 
@@ -488,15 +496,19 @@ async def test_public_share_password_protection(
     assert media_res.json()["detail"] == "PASSWORD_REQUIRED"
 
     # 7. Try wrong password -> expect 401 Incorrect password
-    verify_res = await client.post(f"/share/{share_token}/verify", json={"password": "wrong"})
+    verify_res = await client.post(
+        f"/share/{share_token}/verify", json={"password": "wrong"}
+    )
     assert verify_res.status_code == 401
     assert verify_res.json()["detail"] == "Incorrect password"
 
     # 8. Verify with correct password -> expect 200 with cookies
-    verify_res = await client.post(f"/share/{share_token}/verify", json={"password": "super-secure-password"})
+    verify_res = await client.post(
+        f"/share/{share_token}/verify", json={"password": "super-secure-password"}
+    )
     assert verify_res.status_code == 200
     assert verify_res.json() == {"ok": True}
-    
+
     # Check that cookie is in client's cookie jar
     cookie_name = f"share_unlock_{share_link['id']}"
     assert cookie_name in client.cookies
