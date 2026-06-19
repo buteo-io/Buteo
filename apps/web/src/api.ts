@@ -52,7 +52,7 @@ async function readError(r: Response): Promise<string> {
   return text;
 }
 
-export type Me = { id: string; email: string };
+export type Me = { id: string; email: string; features: string[] };
 export type Device = {
   id: string;
   imei: string;
@@ -286,10 +286,7 @@ export const api = {
     http<OvernightSpotDetect>(`/trips/${id}/overnight-spots/detect`, {
       method: "POST",
     }),
-  exportTripGpx: async (
-    tripId: string,
-    includeMetadata: boolean,
-  ) => {
+  exportTripGpx: async (tripId: string, includeMetadata: boolean) => {
     const r = await fetch(
       `/api/trips/${tripId}/export.gpx${qs({ include_metadata: includeMetadata ? "true" : "false" })}`,
       {

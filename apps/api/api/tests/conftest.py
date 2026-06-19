@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 import httpx
 import pytest
+from fastapi import Depends
 from sqlalchemy import delete
 
 os.environ.setdefault("JWT_SECRET", "test-secret-" + "x" * 40)
@@ -83,6 +84,7 @@ async def _provision(email: str, password: str = "pw1234abcd!!") -> Account:
             password_hash=hash_password(password),
             database_type="sqlite",
             database_name=f"tnt{tenant_id}.db",
+            features=["can_write"],
         )
         id_s.add(tenant)
         await id_s.commit()
@@ -203,8 +205,11 @@ async def client() -> AsyncIterator[httpx.AsyncClient]:
 
     from api.deps import require_feature
 
-    @app.get("/test-premium-route", dependencies=[require_feature("premium_analytics")])
-    def premium_route():
+    @app.get(
+        "/test-additional-route",
+        dependencies=[Depends(require_feature("additional_analytics"))],
+    )
+    def additional_route():
         return {"status": "ok"}
 
     transport = httpx.ASGITransport(app=app)
@@ -228,6 +233,35 @@ async def other_authed(other_account: Account) -> AsyncIterator[httpx.AsyncClien
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
         await _do_login(c, other_account.email, other_account.password)
+        yield c
+
+
+async def _set_read_only(tenant_id: str) -> None:
+    """Strip ``can_write`` from *tenant_id* and bump token_version."""
+    from sqlalchemy import update
+
+    async with IdentitySessionLocal() as id_s:
+        await id_s.execute(
+            update(Tenant)
+            .where(Tenant.tenant_id == tenant_id)
+            .values(features=[], token_version=Tenant.token_version + 1)
+        )
+        await id_s.commit()
+
+
+@pytest.fixture
+async def read_only_authed(account: Account) -> AsyncIterator[httpx.AsyncClient]:
+    """Client logged in as :func:`account` with ``can_write`` stripped.
+
+    The flag is removed before the client logs in, so the resulting JWT
+    contains no write permission in its ``features`` claim.
+    """
+    await _set_read_only(account.tenant_id)
+
+    app = _create_api_app()
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+        await _do_login(c, account.email, account.password)
         yield c
 
 

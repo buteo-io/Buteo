@@ -53,7 +53,13 @@ def dummy_verify_password() -> None:
     bcrypt.checkpw(b"dummy-password-for-timing", _get_dummy_password_hash().encode())
 
 
-def make_token(*, public_id: PrefixUUID, tenant_id: PrefixUUID, token_version: int, features: list[str] | None = None) -> str:
+def make_token(
+    *,
+    public_id: PrefixUUID,
+    tenant_id: PrefixUUID,
+    token_version: int,
+    features: list[str] | None = None,
+) -> str:
     """Issue a signed JWT for a user.
 
     Args:
@@ -85,9 +91,16 @@ def make_token(*, public_id: PrefixUUID, tenant_id: PrefixUUID, token_version: i
 class TokenClaims:
     """Lightweight value object for the subset of claims we act on."""
 
-    __slots__ = ("jti", "public_id", "tenant_id", "token_version", "features")
+    __slots__ = ("features", "jti", "public_id", "tenant_id", "token_version")
 
-    def __init__(self, public_id: PrefixUUID, tenant_id: PrefixUUID, token_version: int, jti: str, features: list[str]) -> None:
+    def __init__(
+        self,
+        public_id: PrefixUUID,
+        tenant_id: PrefixUUID,
+        token_version: int,
+        jti: str,
+        features: set[str],
+    ) -> None:
         self.public_id = public_id
         self.tenant_id = tenant_id
         self.token_version = token_version
@@ -114,7 +127,7 @@ def parse_token(token: str) -> TokenClaims | None:
             tenant_id=str(data.get("tenant_id", "")),
             token_version=int(data.get("ver", 0)),
             jti=str(data.get("jti", "")),
-            features=list(data.get("features", [])),
+            features=set(data.get("features", [])),
         )
     except (JWTError, KeyError, ValueError):
         return None

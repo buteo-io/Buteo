@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 from fastapi import Cookie, Depends, Header, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from tracker_core.features import Feature
 from tracker_core.internal.appctx.config import AppConfig
 from tracker_core.store.identity_db import Tenant, get_identity_session
 from tracker_core.store.models import User
@@ -94,18 +95,27 @@ def get_current_claims(
     return claims
 
 
-def require_feature(feature_name: str):
-    """Enforce that the tenant possesses the requested feature in their JWT claims."""
+def require_feature(*feature_names: Feature):
+    """Return a FastAPI dependency that enforces the tenant has all ``feature_names`` in their JWT.
+
+    Usage::
+
+        @router.post("/", dependencies=[Depends(require_feature(Feature.SOME_FLAG))])
+        @router.post("/", dependencies=[Depends(require_feature(Feature.FOO, Feature.BAR))])
+    """
+
     def dependency(
         claims: TokenClaims = Depends(get_current_claims),
         _user: User = Depends(current_user),
     ) -> None:
-        if feature_name not in claims.features:
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN,
-                f"Feature '{feature_name}' is locked. Please upgrade.",
-            )
-    return Depends(dependency)
+        for feature_name in feature_names:
+            if feature_name not in claims.features:
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN,
+                    f"Feature '{feature_name}' is not enabled for this account.",
+                )
+
+    return dependency
 
 
 async def current_user(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import httpx
+from fastapi import Depends
 
 from .conftest import Account
 
@@ -88,7 +89,9 @@ async def test_me_unauthenticated_is_401(client: httpx.AsyncClient):
     assert r.status_code == 401
 
 
-async def test_me_after_login_returns_account(authed: httpx.AsyncClient, account: Account):
+async def test_me_after_login_returns_account(
+    authed: httpx.AsyncClient, account: Account
+):
     r = await authed.get("/me")
     assert r.status_code == 200
     body = r.json()
@@ -96,18 +99,20 @@ async def test_me_after_login_returns_account(authed: httpx.AsyncClient, account
     # public_id is a UUID string
     assert "-" in body["id"]
     assert "features" in body
-    assert body["features"] == []
+    assert body["features"] == ["can_write"]
 
 
 async def test_me_returns_tenant_features(client: httpx.AsyncClient, account: Account):
-    from tracker_core.store.identity_db import IdentitySessionLocal, Tenant
     from sqlalchemy import select
+    from tracker_core.store.identity_db import IdentitySessionLocal, Tenant
 
     # 1. Update tenant features in central DB
     async with IdentitySessionLocal() as id_s:
-        tenant = await id_s.scalar(select(Tenant).where(Tenant.tenant_id == account.tenant_id))
+        tenant = await id_s.scalar(
+            select(Tenant).where(Tenant.tenant_id == account.tenant_id)
+        )
         assert tenant is not None
-        tenant.features = ["plugin_weather", "premium_analytics"]
+        tenant.features = ["can_write", "plugin_weather", "additional_analytics"]
         await id_s.commit()
 
     # 2. Log in with the updated tenant
@@ -122,7 +127,11 @@ async def test_me_returns_tenant_features(client: httpx.AsyncClient, account: Ac
     assert r_me.status_code == 200
     body = r_me.json()
     assert body["email"] == account.email
-    assert body["features"] == ["plugin_weather", "premium_analytics"]
+    assert set(body["features"]) == {
+        "can_write",
+        "plugin_weather",
+        "additional_analytics",
+    }
 
 
 async def test_logout_invalidates_old_bearer(
@@ -168,7 +177,11 @@ async def test_logout_clears_session_cookie(
     cleared = [c for c in set_cookies if c.startswith("tracker_session=")]
     assert cleared, f"no Set-Cookie for tracker_session in {set_cookies}"
     cookie = cleared[0].lower()
-    assert "max-age=0" in cookie or 'tracker_session=""' in cookie or "tracker_session=;" in cookie
+    assert (
+        "max-age=0" in cookie
+        or 'tracker_session=""' in cookie
+        or "tracker_session=;" in cookie
+    )
 
 
 async def test_require_feature_dependency(
@@ -176,38 +189,45 @@ async def test_require_feature_dependency(
     authed: httpx.AsyncClient,
     account: Account,
 ) -> None:
-    from tracker_core.store.identity_db import IdentitySessionLocal, Tenant
-    from sqlalchemy import select
     from api.main import create_app
+    from sqlalchemy import select
+    from tracker_core.store.identity_db import IdentitySessionLocal, Tenant
 
     # 1. Unauthenticated request -> 401 (use a clean client to avoid cookie sharing with authed)
     app = create_app()
     from api.deps import require_feature
 
-    @app.get("/test-premium-route", dependencies=[require_feature("premium_analytics")])
-    def premium_route():
+    @app.get(
+        "/test-additional-route",
+        dependencies=[Depends(require_feature("additional_analytics"))],
+    )
+    def additional_route():
         return {"status": "ok"}
 
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as unauth_client:
-        r_unauth = await unauth_client.get("/test-premium-route")
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as unauth_client:
+        r_unauth = await unauth_client.get("/test-additional-route")
         assert r_unauth.status_code == 401, r_unauth.text
 
     # 2. Authenticated but lacking feature -> 403
-    r_no_feat = await authed.get("/test-premium-route")
+    r_no_feat = await authed.get("/test-additional-route")
     assert r_no_feat.status_code == 403
-    assert "locked" in r_no_feat.text
+    assert "not enabled" in r_no_feat.text
 
     # 3. Simulate granting feature and bumping token_version
     async with IdentitySessionLocal() as id_s:
-        tenant = await id_s.scalar(select(Tenant).where(Tenant.tenant_id == account.tenant_id))
+        tenant = await id_s.scalar(
+            select(Tenant).where(Tenant.tenant_id == account.tenant_id)
+        )
         assert tenant is not None
-        tenant.features = ["premium_analytics"]
+        tenant.features = ["additional_analytics"]
         tenant.token_version = (tenant.token_version or 0) + 1
         await id_s.commit()
 
     # Old authed token is now revoked -> 401
-    r_revoked = await authed.get("/test-premium-route")
+    r_revoked = await authed.get("/test-additional-route")
     assert r_revoked.status_code == 401
 
     # 4. Log in again to get fresh JWT containing features
@@ -217,18 +237,19 @@ async def test_require_feature_dependency(
     )
     assert r_login.status_code == 200
 
-    # Request premium route with new token -> 200
-    r_success = await client.get("/test-premium-route")
+    # Request additional route with new token -> 200
+    r_success = await client.get("/test-additional-route")
     assert r_success.status_code == 200
     assert r_success.json() == {"status": "ok"}
 
     # 5. Deactivate tenant -> 401
     async with IdentitySessionLocal() as id_s:
-        tenant = await id_s.scalar(select(Tenant).where(Tenant.tenant_id == account.tenant_id))
+        tenant = await id_s.scalar(
+            select(Tenant).where(Tenant.tenant_id == account.tenant_id)
+        )
         assert tenant is not None
         tenant.is_active = False
         await id_s.commit()
 
-    r_deactivated = await client.get("/test-premium-route")
+    r_deactivated = await client.get("/test-additional-route")
     assert r_deactivated.status_code == 401
-

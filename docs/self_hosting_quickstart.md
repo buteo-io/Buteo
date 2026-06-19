@@ -95,6 +95,25 @@ docker compose run --rm api python -m tracker_core.cli.manage create-device \
   --email your-email@yourdomain.com --imei 123456789012345 --name "My Vehicle"
 ```
 
+### 3. (Optional) Read-Only Account
+
+```bash
+# Create the demo account
+docker compose run --rm api python -m tracker_core.cli.manage create-user \
+  --email demo@yourdomain.com --password "YourPassword"
+
+# Seed demo data (see seed-demo CLI command), then lock the account
+docker compose run --rm api python -m tracker_core.cli.manage features grant \
+  --email demo@yourdomain.com --feature read_only
+```
+
+A read-only account can log in and view all data normally, but every write operation (creating/editing/deleting trips, places, overnight spots, and share links) returns **403 Forbidden**. To re-enable writes at any time:
+
+```bash
+docker compose run --rm api python -m tracker_core.cli.manage features revoke \
+  --email demo@yourdomain.com --feature read_only
+```
+
 ---
 
 ## Step 6: Configure Your Tracking Clients

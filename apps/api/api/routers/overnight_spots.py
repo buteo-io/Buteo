@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from tracker_core.features import Feature
 from tracker_core.internal.appctx.config import AppConfig
 from tracker_core.overnight_service import detect_and_persist_overnights
 from tracker_core.store.ids import PrefixUUID
@@ -23,7 +24,7 @@ from tracker_core.store.models import (
     User,
 )
 
-from ..deps import current_user, get_db, own_trip
+from ..deps import current_user, get_db, own_trip, require_feature
 from ..limiter import limiter
 from ..media_utils import (
     ALLOWED_IMAGE_MIMES,
@@ -207,6 +208,7 @@ async def update_overnight_spot(
     body: OvernightSpotUpdateIn,
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ):
     """Update overnight spot name and notes. Cannot delete overnight spots."""
     spot, trip_public_id = await _own_overnight_spot(db, user, spot_id)
@@ -258,6 +260,7 @@ async def upload_overnight_spot_media(
     file: UploadFile = File(...),
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ):
     """Upload media (image/video) to an overnight spot."""
     spot, _ = await _own_overnight_spot(db, user, spot_id)
@@ -334,6 +337,7 @@ async def delete_overnight_spot_media(
     media_id: PrefixUUID,
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ):
     """Delete a media item from an overnight spot."""
     spot, _ = await _own_overnight_spot(db, user, spot_id)

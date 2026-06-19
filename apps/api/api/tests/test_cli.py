@@ -237,10 +237,10 @@ def test_cli_features_management() -> None:
     )
     assert result.exit_code == 0
 
-    # 2. List features (should be none initially)
+    # 2. List features (should have can_write by default)
     result_list = runner.invoke(cli, ["features", "list", "--email", email])
     assert result_list.exit_code == 0
-    assert "(none)" in result_list.output
+    assert "can_write" in result_list.output
 
     # Get initial token version
     async def get_tenant_details():
@@ -250,47 +250,67 @@ def test_cli_features_management() -> None:
             return tenant.token_version, tenant.features
 
     initial_version, initial_feats = asyncio.run(get_tenant_details())
-    assert initial_feats == []
+    assert initial_feats == ["can_write"]
 
-    # 3. Grant feature
+    # 3. Reject unknown feature names
+    result_bad = runner.invoke(
+        cli,
+        ["features", "grant", "--email", email, "--feature", "typo_flag"],
+    )
+    assert result_bad.exit_code != 0
+    assert "Unknown feature" in result_bad.output
+    assert "can_write" in result_bad.output  # valid names listed in error
+
+    result_bad_revoke = runner.invoke(
+        cli,
+        ["features", "revoke", "--email", email, "--feature", "typo_flag"],
+    )
+    assert result_bad_revoke.exit_code != 0
+    assert "Unknown feature" in result_bad_revoke.output
+
+    # Token version must not have changed
+    v_after_bad, _ = asyncio.run(get_tenant_details())
+    assert v_after_bad == initial_version
+
+    # 4. Revoke can_write (simulate pausing tenant)
     result_grant = runner.invoke(
         cli,
-        ["features", "grant", "--email", email, "--feature", "premium_analytics"],
+        ["features", "revoke", "--email", email, "--feature", "can_write"],
     )
     assert result_grant.exit_code == 0
-    assert "Granted 'premium_analytics'" in result_grant.output
+    assert "Revoked 'can_write'" in result_grant.output
 
-    # Verify granted feature and bumped token version
+    # Verify revoked feature and bumped token version
     v_after_grant, feats_after_grant = asyncio.run(get_tenant_details())
     assert v_after_grant == initial_version + 1
-    assert feats_after_grant == ["premium_analytics"]
+    assert feats_after_grant == []
 
-    # List features again
+    # List features again — should show none
     result_list_2 = runner.invoke(cli, ["features", "list", "--email", email])
     assert result_list_2.exit_code == 0
-    assert "premium_analytics" in result_list_2.output
+    assert "(none)" in result_list_2.output
 
-    # Granting already granted feature should be idempotent and not bump token version
+    # Revoking already revoked feature should be idempotent and not bump token version
     result_grant_again = runner.invoke(
         cli,
-        ["features", "grant", "--email", email, "--feature", "premium_analytics"],
+        ["features", "revoke", "--email", email, "--feature", "can_write"],
     )
     assert result_grant_again.exit_code == 0
     v_after_grant_again, _ = asyncio.run(get_tenant_details())
     assert v_after_grant_again == v_after_grant
 
-    # 4. Revoke feature
+    # 5. Re-grant can_write (restore access)
     result_revoke = runner.invoke(
         cli,
-        ["features", "revoke", "--email", email, "--feature", "premium_analytics"],
+        ["features", "grant", "--email", email, "--feature", "can_write"],
     )
     assert result_revoke.exit_code == 0
-    assert "Revoked 'premium_analytics'" in result_revoke.output
+    assert "Granted 'can_write'" in result_revoke.output
 
-    # Verify revoked feature and bumped token version
+    # Verify restored feature and bumped token version
     v_after_revoke, feats_after_revoke = asyncio.run(get_tenant_details())
     assert v_after_revoke == v_after_grant + 1
-    assert feats_after_revoke == []
+    assert feats_after_revoke == ["can_write"]
 
     # Clean up
     runner.invoke(cli, ["delete-tenant", "--tenant-id", tenant_id])

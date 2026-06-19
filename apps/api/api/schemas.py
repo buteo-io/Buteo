@@ -17,7 +17,7 @@ class UTCModel(BaseModel):
 
     @model_validator(mode="after")
     def _stamp_utc(self) -> UTCModel:
-        for field in self.model_fields:
+        for field in self.__class__.model_fields:
             v = getattr(self, field)
             if isinstance(v, datetime) and v.tzinfo is None:
                 setattr(self, field, v.replace(tzinfo=timezone.utc))

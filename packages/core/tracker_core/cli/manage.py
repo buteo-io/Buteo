@@ -11,6 +11,7 @@ import click
 from sqlalchemy import select
 
 from tracker_core.custom_logger import configure_logging
+from tracker_core.features import VALID_FEATURES, Feature
 from tracker_core.internal.appctx.config import AppConfig
 from tracker_core.store.core_db import CoreSessionLocal as SessionLocal
 from tracker_core.store.core_db import init_core_db as init_db
@@ -100,6 +101,7 @@ def create_user(email: str, password: str, tenant_id: str | None) -> None:
                 password_hash=hash_password(password),
                 database_type="sqlite",
                 database_name=f"tnt{target_tenant_id}.db",
+                features=[Feature.CAN_WRITE],
             )
             id_s.add(tenant)
             await id_s.commit()
@@ -360,19 +362,27 @@ def delete_tenant(tenant_id: str) -> None:
 
 @cli.group("features")
 def features_group() -> None:
-    """Manage tenant premium feature flags."""
+    """Manage tenant feature flags."""
     pass
+
+
+@features_group.command("available")
+def list_available_features() -> None:
+    """List all valid feature flag names."""
+    click.echo("Available feature flags:")
+    for name in sorted(VALID_FEATURES):
+        click.echo(f"  {name}")
 
 
 @features_group.command("list")
 @click.option("--email", required=True, help="Tenant owner email")
 def list_features(email: str) -> None:
-    """List active premium features for a tenant."""
+    """List active feature flags for a tenant."""
 
     async def _():
-        norm = email.strip().lower()
+        email_normalized = email.strip().lower()
         async with IdentitySessionLocal() as id_s:
-            tenant = await id_s.scalar(select(Tenant).where(Tenant.email == norm))
+            tenant = await id_s.scalar(select(Tenant).where(Tenant.email == email_normalized))
             if not tenant:
                 raise click.ClickException("tenant not found")
 
@@ -381,7 +391,8 @@ def list_features(email: str) -> None:
             if not feat_list:
                 click.echo("  (none)")
             for f in feat_list:
-                click.echo(f"  - {f}")
+                suffix = "" if f in VALID_FEATURES else "  (unknown flag)"
+                click.echo(f"  - {f}{suffix}")
 
     _run(_())
 
@@ -390,26 +401,30 @@ def list_features(email: str) -> None:
 @click.option("--email", required=True, help="Tenant owner email")
 @click.option("--feature", required=True, help="Feature name to grant")
 def grant_feature(email: str, feature: str) -> None:
-    """Grant a premium feature to a tenant. Invalidates old sessions."""
+    """Grant a feature flag to a tenant. Invalidates old sessions."""
 
     async def _():
-        norm = email.strip().lower()
-        feature_norm = feature.strip()
+        email_normalized = email.strip().lower()
+        feature_normalized = feature.strip()
+        if feature_normalized not in VALID_FEATURES:
+            raise click.ClickException(
+                f"Unknown feature '{feature_normalized}'. Valid flags: {', '.join(sorted(VALID_FEATURES))}",
+            )
         async with IdentitySessionLocal() as id_s:
-            tenant = await id_s.scalar(select(Tenant).where(Tenant.email == norm))
+            tenant = await id_s.scalar(select(Tenant).where(Tenant.email == email_normalized))
             if not tenant:
                 raise click.ClickException("tenant not found")
 
             current_feats = list(tenant.features or [])
-            if feature_norm in current_feats:
-                click.echo(f"Feature '{feature_norm}' already granted.")
+            if feature_normalized in current_feats:
+                click.echo(f"Feature '{feature_normalized}' already granted.")
                 return
 
-            current_feats.append(feature_norm)
+            current_feats.append(feature_normalized)
             tenant.features = current_feats
             tenant.token_version = (tenant.token_version or 0) + 1
             await id_s.commit()
-            click.echo(f"Granted '{feature_norm}' to {tenant.email}. Session tokens invalidated.")
+            click.echo(f"Granted '{feature_normalized}' to {tenant.email}. Session tokens invalidated.")
 
     _run(_())
 
@@ -418,26 +433,30 @@ def grant_feature(email: str, feature: str) -> None:
 @click.option("--email", required=True, help="Tenant owner email")
 @click.option("--feature", required=True, help="Feature name to revoke")
 def revoke_feature(email: str, feature: str) -> None:
-    """Revoke a premium feature from a tenant. Invalidates old sessions."""
+    """Revoke a feature flag from a tenant. Invalidates old sessions."""
 
     async def _():
-        norm = email.strip().lower()
-        feature_norm = feature.strip()
+        email_normalized = email.strip().lower()
+        feature_normalized = feature.strip()
+        if feature_normalized not in VALID_FEATURES:
+            raise click.ClickException(
+                f"Unknown feature '{feature_normalized}'. Valid flags: {', '.join(sorted(VALID_FEATURES))}",
+            )
         async with IdentitySessionLocal() as id_s:
-            tenant = await id_s.scalar(select(Tenant).where(Tenant.email == norm))
+            tenant = await id_s.scalar(select(Tenant).where(Tenant.email == email_normalized))
             if not tenant:
                 raise click.ClickException("tenant not found")
 
             current_feats = list(tenant.features or [])
-            if feature_norm not in current_feats:
-                click.echo(f"Feature '{feature_norm}' not present.")
+            if feature_normalized not in current_feats:
+                click.echo(f"Feature '{feature_normalized}' not present.")
                 return
 
-            current_feats.remove(feature_norm)
+            current_feats.remove(feature_normalized)
             tenant.features = current_feats
             tenant.token_version = (tenant.token_version or 0) + 1
             await id_s.commit()
-            click.echo(f"Revoked '{feature_norm}' from {tenant.email}. Session tokens invalidated.")
+            click.echo(f"Revoked '{feature_normalized}' from {tenant.email}. Session tokens invalidated.")
 
     _run(_())
 

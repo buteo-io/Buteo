@@ -123,9 +123,14 @@ class TenantDatabaseManager:
 
 
 async def get_tenant_by_imei(imei: str) -> str | None:
-    """Resolve the active tenant_id for a given device IMEI from Identity DB."""
+    """Resolve the active tenant_id for a given device IMEI from Identity DB.
+
+    Returns ``None`` if the device is unknown, the tenant is inactive, or the
+    tenant does not have the ``can_write`` feature flag (i.e. is paused).
+    """
     from sqlalchemy import select
 
+    from tracker_core.features import Feature
     from tracker_core.store.identity_db import GPSDevice, IdentitySessionLocal, Tenant
 
     async with IdentitySessionLocal() as id_db:
@@ -134,6 +139,8 @@ async def get_tenant_by_imei(imei: str) -> str | None:
             return None
         tenant = await id_db.scalar(select(Tenant).where(Tenant.tenant_id == gps_device.tenant_id))
         if not tenant or not tenant.is_active:
+            return None
+        if Feature.CAN_WRITE not in (tenant.features or []):
             return None
         return tenant.tenant_id
 
