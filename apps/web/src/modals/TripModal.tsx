@@ -57,13 +57,26 @@ export function TripModal({ state, device, overnightSpots, onClose, onSubmit, on
   const deviceId = isEdit ? state.trip.device_id : device.id;
 
   const submit = async () => {
-    if (!name.trim()) return;
-    const fromIso = new Date(from).toISOString();
+    if (!name.trim()) {
+      setSubmitError(t("trips.errors.nameRequired"));
+      return;
+    }
+    const fromDate = new Date(from);
+    if (!from || isNaN(fromDate.getTime()) || fromDate.getFullYear() > 9999) {
+      setSubmitError(t("trips.errors.invalidDate"));
+      return;
+    }
+    const fromIso = fromDate.toISOString();
     let endedAt: string | null = null;
     if (!ongoing) {
-      const toIso = new Date(to).toISOString();
-      if (new Date(toIso) <= new Date(fromIso)) {
-        alert(t("trips.errors.toAfterFrom"));
+      const toDate = new Date(to);
+      if (!to || isNaN(toDate.getTime()) || toDate.getFullYear() > 9999) {
+        setSubmitError(t("trips.errors.invalidToDate"));
+        return;
+      }
+      const toIso = toDate.toISOString();
+      if (toDate <= fromDate) {
+        setSubmitError(t("trips.errors.toAfterFrom"));
         return;
       }
       endedAt = toIso;

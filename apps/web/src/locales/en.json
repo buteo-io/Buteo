@@ -29,6 +29,9 @@
       "device": "Device: {{name}}"
     },
     "errors": {
+      "nameRequired": "Trip name is required",
+      "invalidDate": "'From' date is invalid",
+      "invalidToDate": "'To' date is invalid",
       "toAfterFrom": "'To' must be after 'From'",
       "saveFailed": "Failed to save trip",
       "narrowWindowMediaLoss_one": "Shortening this trip will remove 1 overnight spot that has photos/videos. They will be permanently deleted. Continue?",

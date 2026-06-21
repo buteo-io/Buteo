@@ -29,6 +29,9 @@
       "device": "Gerät: {{name}}"
     },
     "errors": {
+      "nameRequired": "Reisename ist erforderlich",
+      "invalidDate": "Das 'Von'-Datum ist ungültig",
+      "invalidToDate": "Das 'Bis'-Datum ist ungültig",
       "toAfterFrom": "'Bis' muss nach 'Von' liegen",
       "saveFailed": "Reise konnte nicht gespeichert werden",
       "narrowWindowMediaLoss_one": "Das Kürzen der Reise entfernt 1 Übernachtungsort mit Fotos/Videos. Diese werden unwiderruflich gelöscht. Fortfahren?",

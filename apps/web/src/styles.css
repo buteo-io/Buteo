@@ -1997,7 +1997,7 @@ button.ghost:hover {
   height: 100%;
   overflow: hidden;
   background:
-    radial-gradient(ellipse at top, #1e3a8a44, transparent 60%), var(--bg-0);
+    radial-gradient(ellipse at top, rgba(217,164,65,.18), transparent 60%), var(--bg-0);
 }
 .login form {
   background: var(--bg-1);
@@ -2040,16 +2040,22 @@ button.ghost:hover {
   width: 100%;
   margin-bottom: 12px;
 }
-.login button {
+.login button:not(.password-toggle-btn) {
   width: 100%;
   padding: 10px;
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-2);
+  color: #1a1008;
   border: 0;
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
   font-weight: 600;
+  transition: background .15s, box-shadow .15s;
+  box-shadow: 0 4px 16px rgba(217,164,65,.35);
+}
+.login button:not(.password-toggle-btn):hover:not(:disabled) {
+  background: #c4893a;
+  box-shadow: 0 6px 20px rgba(217,164,65,.45);
 }
 .login .err {
   color: var(--bad);

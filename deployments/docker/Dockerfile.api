@@ -11,7 +11,8 @@ WORKDIR /app
 # Copy packages first
 COPY packages/core ./packages/core
 
-# Copy apps/api/requirements.txt and install (which references packages/core)
+# Install packages/core, then app requirements
+RUN pip install --no-cache-dir -e /app/packages/core
 COPY apps/api/requirements.txt ./apps/api/requirements.txt
 WORKDIR /app/apps/api
 RUN pip install --no-cache-dir -r requirements.txt
