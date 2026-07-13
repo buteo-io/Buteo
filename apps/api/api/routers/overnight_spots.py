@@ -30,7 +30,7 @@ from ..media_utils import (
     ALLOWED_IMAGE_MIMES,
     ALLOWED_MIMES,
     ALLOWED_VIDEO_MIMES,
-    validate_magic_bytes,
+    save_upload_file,
 )
 from ..schemas import UTCModel
 
@@ -275,13 +275,6 @@ async def upload_overnight_spot_media(
     else:
         max_size = AppConfig.max_audio_size_mb * 1024 * 1024
 
-    content = await file.read()
-    if len(content) > max_size:
-        raise HTTPException(400, f"file too large (max {max_size // (1024 * 1024)}MB)")
-
-    if not validate_magic_bytes(content, file.content_type):
-        raise HTTPException(400, "file content does not match declared type")
-
     if file.content_type in ALLOWED_IMAGE_MIMES:
         media_type = "image"
     elif file.content_type in ALLOWED_VIDEO_MIMES:
@@ -309,7 +302,7 @@ async def upload_overnight_spot_media(
     media_dir = _get_media_dir(spot)
     media_dir.mkdir(parents=True, exist_ok=True)
     file_path = media_dir / stored_filename
-    file_path.write_bytes(content)
+    size_bytes = await save_upload_file(file, file_path, max_size, file.content_type)
 
     m = OvernightSpotMedia(
         overnight_spot_id=spot.id,
@@ -318,7 +311,7 @@ async def upload_overnight_spot_media(
         filename_stored=stored_filename,
         media_type=media_type,
         mime_type=file.content_type,
-        size_bytes=len(content),
+        size_bytes=size_bytes,
     )
     db.add(m)
     await db.commit()
