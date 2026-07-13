@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import secrets
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -19,6 +19,7 @@ from tracker_core.store.models import (
     ShareLink,
     Trip,
     User,
+    place_trips,
 )
 from tracker_core.store.security import hash_password, hash_share_token
 
@@ -210,13 +211,15 @@ async def _apply_share_link_update(
     if "delay_hours" in fields:
         if data.delay_hours is None:
             raise HTTPException(
-                status.HTTP_400_BAD_REQUEST, "delay_hours cannot be null"
+                status.HTTP_400_BAD_REQUEST,
+                "delay_hours cannot be null",
             )
         link.delay_hours = data.delay_hours
     if "blur_meters" in fields:
         if data.blur_meters is None:
             raise HTTPException(
-                status.HTTP_400_BAD_REQUEST, "blur_meters cannot be null"
+                status.HTTP_400_BAD_REQUEST,
+                "blur_meters cannot be null",
             )
         link.blur_meters = data.blur_meters
     if "is_active" in fields:
@@ -232,12 +235,16 @@ async def _apply_share_link_update(
         if data.place_ids is None:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "place_ids cannot be null")
         link.selected_places = await _resolve_share_places(
-            db, user, link.trip, data.place_ids
+            db,
+            user,
+            link.trip,
+            data.place_ids,
         )
     if "overnight_spot_ids" in fields:
         if data.overnight_spot_ids is None:
             raise HTTPException(
-                status.HTTP_400_BAD_REQUEST, "overnight_spot_ids cannot be null"
+                status.HTTP_400_BAD_REQUEST,
+                "overnight_spot_ids cannot be null",
             )
         link.selected_overnight_spots = await _resolve_share_overnight_spots(
             db,
@@ -309,11 +316,17 @@ async def create_share_link(
 
     if data.place_ids:
         link.selected_places = await _resolve_share_places(
-            db, user, trip, data.place_ids
+            db,
+            user,
+            trip,
+            data.place_ids,
         )
     if data.overnight_spot_ids:
         link.selected_overnight_spots = await _resolve_share_overnight_spots(
-            db, user, trip, data.overnight_spot_ids
+            db,
+            user,
+            trip,
+            data.overnight_spot_ids,
         )
 
     db.add(link)
@@ -350,11 +363,7 @@ async def update_share_link(
     _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ) -> ShareLinkOut:
     """Update share link."""
-    stmt = (
-        select(ShareLink)
-        .options(selectinload(ShareLink.trip))
-        .where(ShareLink.public_id == link_id)
-    )
+    stmt = select(ShareLink).options(selectinload(ShareLink.trip)).where(ShareLink.public_id == link_id)
     result = await db.execute(stmt)
     link = result.scalar_one_or_none()
     if not link:
@@ -364,14 +373,10 @@ async def update_share_link(
 
     await _apply_share_link_update(db, user, link, data)
 
-    link.updated_at = datetime.now(timezone.utc)
+    link.updated_at = datetime.now(UTC)
     await db.commit()
 
-    stmt = (
-        select(ShareLink)
-        .options(selectinload(ShareLink.trip))
-        .where(ShareLink.id == link.id)
-    )
+    stmt = select(ShareLink).options(selectinload(ShareLink.trip)).where(ShareLink.id == link.id)
     result = await db.execute(stmt)
     link = result.scalar_one()
 
@@ -387,11 +392,7 @@ async def rotate_share_link(
     _: None = Depends(require_feature(Feature.CAN_WRITE)),
 ) -> ShareLinkSecretOut:
     """Rotate share token and return new clear-text token once."""
-    stmt = (
-        select(ShareLink)
-        .options(selectinload(ShareLink.trip))
-        .where(ShareLink.public_id == link_id)
-    )
+    stmt = select(ShareLink).options(selectinload(ShareLink.trip)).where(ShareLink.public_id == link_id)
     result = await db.execute(stmt)
     link = result.scalar_one_or_none()
     if not link:
@@ -402,14 +403,10 @@ async def rotate_share_link(
     clear_token = secrets.token_urlsafe(32)
     token = f"{tenant_id}_{clear_token}"
     link.token = hash_share_token(token)
-    link.updated_at = datetime.now(timezone.utc)
+    link.updated_at = datetime.now(UTC)
     await db.commit()
 
-    stmt = (
-        select(ShareLink)
-        .options(selectinload(ShareLink.trip))
-        .where(ShareLink.id == link.id)
-    )
+    stmt = select(ShareLink).options(selectinload(ShareLink.trip)).where(ShareLink.id == link.id)
     result = await db.execute(stmt)
     link = result.scalar_one()
     return _out_with_token(link, token)
@@ -434,7 +431,7 @@ async def revoke_share_link(
         return
 
     link.is_active = False
-    link.updated_at = datetime.now(timezone.utc)
+    link.updated_at = datetime.now(UTC)
     await db.commit()
 
 

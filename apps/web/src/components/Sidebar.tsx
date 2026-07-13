@@ -22,11 +22,8 @@ export type Tab =
   | "settings"
   | string;
 
-export const TAB_ORDER: Tab[] = [
-  "map",
-  "trips",
-  "places",
-];
+// eslint-disable-next-line react-refresh/only-export-components
+export const TAB_ORDER: Tab[] = ["map", "trips", "places"];
 
 type Props = {
   tab: Tab;
@@ -44,14 +41,13 @@ export function Sidebar({
   setTab,
   open,
   onClose,
-  email,
+  email: _email,
   onLogout,
   headerAction,
   children,
 }: Props) {
   const { t } = useTranslation();
   const [moreModalOpen, setMoreModalOpen] = useState(false);
-  const [previousTab, setPreviousTab] = useState<Tab | null>(null);
   const registeredTabs = pluginRegistry.getTabs();
   const registeredTab = registeredTabs.find((t) => t.id === tab);
   const getTabLabel = (id: string) => {
@@ -67,11 +63,20 @@ export function Sidebar({
     };
     return labels[id] || id;
   };
-  const panelLabel = tab !== "map"
-    ? (registeredTab ? registeredTab.label : getTabLabel(tab))
-    : "";
+  const panelLabel =
+    tab !== "map"
+      ? registeredTab
+        ? registeredTab.label
+        : getTabLabel(tab)
+      : "";
 
-  const isMoreTab = ["alarms", "share", "export", "settings", ...registeredTabs.map((t) => t.id)].includes(tab);
+  const isMoreTab = [
+    "alarms",
+    "share",
+    "export",
+    "settings",
+    ...registeredTabs.map((t) => t.id),
+  ].includes(tab);
 
   const panelElement = (
     <section
@@ -81,14 +86,15 @@ export function Sidebar({
     >
       <header className="panel-head">
         <h2>{panelLabel}</h2>
-        {headerAction && <div className="panel-head-action">{headerAction}</div>}
+        {headerAction && (
+          <div className="panel-head-action">{headerAction}</div>
+        )}
         {isMoreTab ? (
           <button
             type="button"
             className="panel-back-btn"
             onClick={() => {
               setTab("map");
-              setPreviousTab(tab);
               setTimeout(() => setMoreModalOpen(true), 0);
             }}
             aria-label="Go back"
@@ -113,15 +119,17 @@ export function Sidebar({
   return (
     <>
       {/* slide-up / pinned panel / centered modal */}
-      {tab !== "map" && (
-        isMoreTab ? (
-          <div className={`panel-backdrop ${open ? "is-open" : ""}`} onClick={onClose}>
+      {tab !== "map" &&
+        (isMoreTab ? (
+          <div
+            className={`panel-backdrop ${open ? "is-open" : ""}`}
+            onClick={onClose}
+          >
             {panelElement}
           </div>
         ) : (
           panelElement
-        )
-      )}
+        ))}
 
       {/* bottom navigation bar */}
       <nav className="bottom-nav" aria-label="Primary">
@@ -137,7 +145,7 @@ export function Sidebar({
                 aria-label={label}
               >
                 <span className="bnav-icon">
-                  <TabIcon id={id as any} />
+                  <TabIcon id={id} />
                 </span>
                 <span className="bnav-label">{label}</span>
               </button>
@@ -233,9 +241,7 @@ export function Sidebar({
                 setMoreModalOpen(false);
               }}
             >
-              <span className="burger-option-icon">
-                {plugin.icon}
-              </span>
+              <span className="burger-option-icon">{plugin.icon}</span>
               <span>{plugin.label}</span>
             </button>
           ))}
@@ -321,16 +327,6 @@ function MapIcon() {
     </svg>
   );
 }
-function VanIcon() {
-  return (
-    <svg {...svgProps}>
-      <path d="M3 7h11v10H3z" />
-      <path d="M14 10h4l3 3v4h-7z" />
-      <circle cx="7" cy="18" r="2" />
-      <circle cx="17" cy="18" r="2" />
-    </svg>
-  );
-}
 function RouteIcon() {
   return (
     <svg {...svgProps}>
@@ -396,26 +392,6 @@ function ArrowLeftIcon() {
   return (
     <svg {...svgProps}>
       <path d="M15 18l-6-6 6-6" />
-    </svg>
-  );
-}
-function Logo() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <defs>
-        <linearGradient id="lg" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="var(--accent-2)" />
-          <stop offset="100%" stopColor="var(--accent)" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M12 2.5c4 0 7 3 7 6.8 0 5-7 12.2-7 12.2S5 14.3 5 9.3c0-3.8 3-6.8 7-6.8z"
-        stroke="url(#lg)"
-        strokeWidth="2"
-        fill="currentColor"
-        fillOpacity="0.12"
-      />
-      <circle cx="12" cy="9.3" r="2.4" fill="url(#lg)" />
     </svg>
   );
 }

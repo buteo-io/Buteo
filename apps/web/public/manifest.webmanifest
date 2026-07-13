@@ -8,11 +8,7 @@
   "orientation": "any",
   "background_color": "#0b1220",
   "theme_color": "#0b1220",
-  "categories": [
-    "navigation",
-    "travel",
-    "utilities"
-  ],
+  "categories": ["navigation", "travel", "utilities"],
   "icons": [
     {
       "src": "/buteo-pwa-192.png",

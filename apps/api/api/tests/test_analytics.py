@@ -1,14 +1,22 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 from tracker_core import analytics
 
 
 def _p(
-    t: datetime, lon: float, lat: float, speed: float | None = None
+    t: datetime,
+    lon: float,
+    lat: float,
+    speed: float | None = None,
 ) -> SimpleNamespace:
     return SimpleNamespace(
-        time_id=t, lon=lon, lat=lat, speed=speed, altitude=None, satellites=None
+        time_id=t,
+        lon=lon,
+        lat=lat,
+        speed=speed,
+        altitude=None,
+        satellites=None,
     )
 
 
@@ -19,28 +27,21 @@ def test_haversine_known_distance():
 
 
 def test_detect_trips_simple():
-    base = datetime(2025, 1, 1, 8, tzinfo=timezone.utc)
-    pts = []
+    base = datetime(2025, 1, 1, 8, tzinfo=UTC)
     # drive 0..30min
-    for i in range(31):
-        pts.append(
-            _p(base + timedelta(minutes=i), 13.405 + i * 0.001, 52.52, speed=60.0)
-        )
+    pts = [_p(base + timedelta(minutes=i), 13.405 + i * 0.001, 52.52, speed=60.0) for i in range(31)]
     # stop 30..50min same spot
-    for i in range(31, 51):
-        pts.append(
-            _p(base + timedelta(minutes=i), 13.405 + 30 * 0.001, 52.52, speed=0.0)
-        )
+    pts.extend(_p(base + timedelta(minutes=i), 13.405 + 30 * 0.001, 52.52, speed=0.0) for i in range(31, 51))
     # drive again 50..70min
-    for i in range(51, 71):
-        pts.append(
-            _p(
-                base + timedelta(minutes=i),
-                13.405 + 30 * 0.001 + (i - 50) * 0.001,
-                52.52,
-                speed=60.0,
-            )
+    pts.extend(
+        _p(
+            base + timedelta(minutes=i),
+            13.405 + 30 * 0.001 + (i - 50) * 0.001,
+            52.52,
+            speed=60.0,
         )
+        for i in range(51, 71)
+    )
     trips = analytics.detect_trips(pts)
     assert len(trips) == 2
     assert all(t.distance_km > 0.5 for t in trips)
@@ -48,17 +49,15 @@ def test_detect_trips_simple():
 
 def test_overnight_detect():
     # device idle from 22:00 to 09:00 next day at lat 52, lon 13
-    base = datetime(2025, 1, 1, 22, 0, tzinfo=timezone.utc)
-    pts = [
-        _p(base + timedelta(minutes=i * 30), 13.0, 52.0, speed=0.0) for i in range(24)
-    ]
+    base = datetime(2025, 1, 1, 22, 0, tzinfo=UTC)
+    pts = [_p(base + timedelta(minutes=i * 30), 13.0, 52.0, speed=0.0) for i in range(24)]
     overnights = analytics.detect_overnights(pts)
     assert len(overnights) == 1
     assert overnights[0].duration_s >= 4 * 3600
 
 
 def test_mileage_buckets_by_day():
-    base = datetime(2025, 1, 1, 8, tzinfo=timezone.utc)
+    base = datetime(2025, 1, 1, 8, tzinfo=UTC)
     pts = [
         _p(base, 13.0, 52.0),
         _p(base + timedelta(minutes=10), 13.05, 52.0),  # ~3.4 km same day
@@ -72,7 +71,7 @@ def test_mileage_buckets_by_day():
 
 
 def test_gpx_csv_serialize():
-    base = datetime(2025, 1, 1, 8, tzinfo=timezone.utc)
+    base = datetime(2025, 1, 1, 8, tzinfo=UTC)
     pts = [
         _p(base, 13.0, 52.0, speed=10),
         _p(base + timedelta(minutes=1), 13.001, 52.0, speed=20),

@@ -142,12 +142,13 @@ def _apply_scalars(p: Place, body: PlaceIn) -> None:
 
 @router.get("/places", response_model=list[PlaceOut])
 async def list_places(
-    user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """Return every place owned by the caller, newest first."""
     rows = (
         await db.scalars(
-            select(Place).where(Place.user_id == user.id).order_by(Place.id.desc())
+            select(Place).where(Place.user_id == user.id).order_by(Place.id.desc()),
         )
     ).all()
     logger.debug("list_places user_id=%s count=%d", user.id, len(rows))
@@ -156,7 +157,7 @@ async def list_places(
     if place_ids:
         media_rows = (
             await db.scalars(
-                select(PlaceMedia).where(PlaceMedia.place_id.in_(place_ids))
+                select(PlaceMedia).where(PlaceMedia.place_id.in_(place_ids)),
             )
         ).all()
         for m in media_rows:
@@ -179,7 +180,10 @@ async def create_place(
     db.add(p)
     await db.commit()
     logger.info(
-        "place_create user_id=%s place_id=%s name=%r", user.id, p.public_id, body.name
+        "place_create user_id=%s place_id=%s name=%r",
+        user.id,
+        p.public_id,
+        body.name,
     )
     # Don't refresh: refresh expires `trips` and the selectin re-load would
     # need an awaitable IO call outside the greenlet. expire_on_commit=False
@@ -204,9 +208,7 @@ async def update_place(
     p.trips = trips
     await db.commit()
     logger.info("place_update user_id=%s place_id=%s", user.id, p.public_id)
-    media_rows = (
-        await db.scalars(select(PlaceMedia).where(PlaceMedia.place_id == p.id))
-    ).all()
+    media_rows = (await db.scalars(select(PlaceMedia).where(PlaceMedia.place_id == p.id))).all()
     return _out(p, list(media_rows))
 
 

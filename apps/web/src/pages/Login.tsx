@@ -17,8 +17,8 @@ export default function Login() {
     setErr(null);
     try {
       await login(email, password);
-    } catch (e: any) {
-      setErr(e.message || t("auth.loginFailed"));
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : t("auth.loginFailed"));
     } finally {
       setBusy(false);
     }
@@ -28,7 +28,11 @@ export default function Login() {
     <div className="login">
       <form onSubmit={onSubmit}>
         <div className="login-header">
-          <img src="/buteo-eagle-logo-lg.svg" alt="Buteo Logo" className="login-logo" />
+          <img
+            src="/buteo-eagle-logo-lg.svg"
+            alt="Buteo Logo"
+            className="login-logo"
+          />
           <h1 className="login-title">Buteo</h1>
           <p className="login-subtitle">
             <span>{t("auth.subtitle1")}</span>

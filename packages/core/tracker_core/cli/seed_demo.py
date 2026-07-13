@@ -19,7 +19,7 @@ import math
 import os
 import random
 from dataclasses import dataclass
-from datetime import datetime, time, timedelta, timezone
+from datetime import UTC, datetime, time, timedelta
 
 import httpx
 from sqlalchemy import delete, select
@@ -144,14 +144,14 @@ ROUTES: dict[str, dict[str, list[tuple[float, float]]]] = {
 
 # Schedule (start dates) for each round-trip. ~one trip per quarter.
 SCHEDULE: list[tuple[str, datetime]] = [
-    ("stockholm", datetime(2024, 3, 15, 9, 0, tzinfo=timezone.utc)),
-    ("barcelona", datetime(2024, 6, 7, 9, 0, tzinfo=timezone.utc)),
-    ("albania", datetime(2024, 9, 12, 9, 0, tzinfo=timezone.utc)),
-    ("toulouse", datetime(2024, 11, 22, 9, 0, tzinfo=timezone.utc)),
-    ("stockholm", datetime(2025, 4, 4, 9, 0, tzinfo=timezone.utc)),
-    ("barcelona", datetime(2025, 7, 18, 9, 0, tzinfo=timezone.utc)),
-    ("albania", datetime(2025, 10, 3, 9, 0, tzinfo=timezone.utc)),
-    ("toulouse", datetime(2026, 2, 14, 9, 0, tzinfo=timezone.utc)),
+    ("stockholm", datetime(2024, 3, 15, 9, 0, tzinfo=UTC)),
+    ("barcelona", datetime(2024, 6, 7, 9, 0, tzinfo=UTC)),
+    ("albania", datetime(2024, 9, 12, 9, 0, tzinfo=UTC)),
+    ("toulouse", datetime(2024, 11, 22, 9, 0, tzinfo=UTC)),
+    ("stockholm", datetime(2025, 4, 4, 9, 0, tzinfo=UTC)),
+    ("barcelona", datetime(2025, 7, 18, 9, 0, tzinfo=UTC)),
+    ("albania", datetime(2025, 10, 3, 9, 0, tzinfo=UTC)),
+    ("toulouse", datetime(2026, 2, 14, 9, 0, tzinfo=UTC)),
 ]
 
 
@@ -407,7 +407,7 @@ async def gen_round_trip(
                 next_departure = datetime.combine(
                     cur.date() + timedelta(days=num_nights),
                     time(9, 0),
-                    tzinfo=timezone.utc,
+                    tzinfo=UTC,
                 ) + timedelta(minutes=departure_jitter_mins)
                 stay_hours = (next_departure - cur).total_seconds() / 3600.0
                 if stay_hours < 1.0:
@@ -448,7 +448,7 @@ async def insert_points(device_id: int, points: list[GenPoint]) -> int:
     return total
 
 
-async def main() -> None:  # noqa: C901
+async def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--email", required=True)
     ap.add_argument("--imei", required=True)
@@ -532,7 +532,7 @@ async def main() -> None:  # noqa: C901
         else:
             await db.commit()
 
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     grand_total = 0
     client_ctx = httpx.AsyncClient() if not args.no_osrm else None
     if client_ctx is not None:
@@ -546,7 +546,7 @@ async def main() -> None:  # noqa: C901
             start_dt = datetime.combine(
                 start_dt.date(),
                 time(9, 0),
-                tzinfo=timezone.utc,
+                tzinfo=UTC,
             )
             print(f"\n== {name.upper()} starting {start_dt.date()} ==")
             pts = await gen_round_trip(client_ctx, name, start_dt)
@@ -556,7 +556,7 @@ async def main() -> None:  # noqa: C901
                 print(f"  trimmed to now ({now.isoformat()}); {len(pts)} pts kept")
             if pts:
                 print(
-                    f"  generated {len(pts)} points  |  trip window: {pts[0].time_id.date()} → {pts[-1].time_id.date()}"
+                    f"  generated {len(pts)} points  |  trip window: {pts[0].time_id.date()} \u2192 {pts[-1].time_id.date()}"
                 )
             else:
                 print("  generated 0 points (skipped)")

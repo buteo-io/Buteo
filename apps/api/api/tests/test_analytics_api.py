@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
 from tracker_core.store.core_db import CoreSessionLocal as SessionLocal
@@ -14,7 +14,7 @@ from .conftest import Account
 
 async def _seed_drive(device_id: int) -> tuple[datetime, datetime]:
     """Seed ~10 minutes of driving + 15 minutes stopped (so detect_trips finds one trip)."""
-    base = datetime(2025, 5, 1, 9, tzinfo=timezone.utc)
+    base = datetime(2025, 5, 1, 9, tzinfo=UTC)
     async with SessionLocal() as s:
         for i in range(11):
             s.add(

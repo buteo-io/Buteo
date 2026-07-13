@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import type { Map as MLMap } from "maplibre-gl";
 
 export interface RegisteredTab {
   id: string;
@@ -7,7 +8,7 @@ export interface RegisteredTab {
   panel: ReactNode;
 }
 
-export type MapLoadCallback = (map: any) => void;
+export type MapLoadCallback = (map: MLMap) => void;
 
 class FeatureRegistry {
   private tabs: RegisteredTab[] = [];
@@ -18,7 +19,9 @@ class FeatureRegistry {
    */
   registerTab(tab: RegisteredTab): void {
     if (this.tabs.some((t) => t.id === tab.id)) {
-      console.warn(`Plugin registry: Tab with ID "${tab.id}" is already registered.`);
+      console.warn(
+        `Plugin registry: Tab with ID "${tab.id}" is already registered.`,
+      );
       return;
     }
     this.tabs.push(tab);
@@ -42,7 +45,7 @@ class FeatureRegistry {
   /**
    * Trigger all registered map load callbacks with the given map handle.
    */
-  triggerMapLoad(mapInstance: any): void {
+  triggerMapLoad(mapInstance: MLMap): void {
     this.mapCallbacks.forEach((cb) => {
       try {
         cb(mapInstance);

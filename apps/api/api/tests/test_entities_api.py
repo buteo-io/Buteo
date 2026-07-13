@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import pytest
 import httpx
+import pytest
 
 
 @pytest.mark.asyncio
@@ -21,7 +21,8 @@ async def test_entities_listing(authed: httpx.AsyncClient):
 
 @pytest.mark.asyncio
 async def test_entities_details_and_foreign_404(
-    authed: httpx.AsyncClient, other_authed: httpx.AsyncClient
+    authed: httpx.AsyncClient,
+    other_authed: httpx.AsyncClient,
 ):
     """GET /entities/{id} retrieves the entity; foreign users get 404."""
     r = await authed.get("/entities")

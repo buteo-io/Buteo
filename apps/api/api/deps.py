@@ -43,7 +43,8 @@ def get_current_tenant_id(request: Request) -> str:
             return claims.tenant_id
 
     raise HTTPException(
-        status.HTTP_401_UNAUTHORIZED, "Could not resolve tenant id from token"
+        status.HTTP_401_UNAUTHORIZED,
+        "Could not resolve tenant id from token",
     )
 
 
@@ -144,7 +145,7 @@ async def current_user(
 
     # 1. Verify Tenant in the central identity database
     tenant = await identity_db.scalar(
-        select(Tenant).where(Tenant.tenant_id == claims.tenant_id)
+        select(Tenant).where(Tenant.tenant_id == claims.tenant_id),
     )
     if not tenant or not tenant.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "tenant inactive")

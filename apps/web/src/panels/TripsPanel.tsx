@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Device, Place, ShareLink, Trip, TripStats } from "../api";
 
@@ -18,9 +18,7 @@ type Props = {
   onClose: () => void;
   onFlyToPlace: (p: Place) => void;
   onEdit: (t: Trip) => void | Promise<void>;
-  onDelete: (id: string) => void;
   onEnd: (t: Trip) => void;
-  onDownload: (t: Trip, fmt: "gpx" | "csv") => void;
   onShare: (t: Trip, shareLinkId?: string) => void;
   onCopyShare: (linkId: string) => void;
 };
@@ -39,9 +37,7 @@ export function TripsPanel({
   onClose,
   onFlyToPlace,
   onEdit,
-  onDelete,
   onEnd,
-  onDownload,
   onShare,
   onCopyShare,
 }: Props) {
@@ -55,7 +51,9 @@ export function TripsPanel({
           const dev = devices.find((d) => d.id === t.device_id);
           const isOpen = t.id === selectedTripId;
           const linked = places.filter((p) => p.trip_ids.includes(t.id));
-          const tripShareLinks = shareLinks.filter((link) => link.trip_id === t.id);
+          const tripShareLinks = shareLinks.filter(
+            (link) => link.trip_id === t.id,
+          );
           return (
             <li
               key={t.id}
@@ -138,7 +136,14 @@ export function TripsPanel({
                     <div className="muted small">computing…</div>
                   )}
                   {t.ended_at === null && (
-                    <div className="row gap" style={{ marginTop: "12px", marginBottom: "12px", flexWrap: "wrap" }}>
+                    <div
+                      className="row gap"
+                      style={{
+                        marginTop: "12px",
+                        marginBottom: "12px",
+                        flexWrap: "wrap",
+                      }}
+                    >
                       <button
                         type="button"
                         className="ghost small"
@@ -196,7 +201,9 @@ function TripPlaces({
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
         >
-          <span className={`chevron${open ? " open" : ""}`} aria-hidden="true">▸</span>
+          <span className={`chevron${open ? " open" : ""}`} aria-hidden="true">
+            ▸
+          </span>
           <span className="trip-places-label">
             PLACES <span className="muted small">({linked.length})</span>
           </span>
@@ -213,7 +220,9 @@ function TripPlaces({
             <span>Show only places linked to this trip</span>
           </label>
           {linked.length === 0 ? (
-            <div className="muted small">No places linked yet. Edit a place to link it.</div>
+            <div className="muted small">
+              No places linked yet. Edit a place to link it.
+            </div>
           ) : (
             <ul className="list trip-places-list">
               {linked.map((p) => (
@@ -250,7 +259,10 @@ function TripShareLinks({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="trip-places" style={{ marginTop: "12px", marginBottom: "12px" }}>
+    <div
+      className="trip-places"
+      style={{ marginTop: "12px", marginBottom: "12px" }}
+    >
       <div className="row trip-places-head">
         <button
           type="button"
@@ -258,21 +270,24 @@ function TripShareLinks({
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
         >
-          <span className={`chevron${open ? " open" : ""}`} aria-hidden="true">▸</span>
+          <span className={`chevron${open ? " open" : ""}`} aria-hidden="true">
+            ▸
+          </span>
           <span className="trip-places-label">
-            {t("share.title").toUpperCase()} <span className="muted small">({links.length})</span>
+            {t("share.title").toUpperCase()}{" "}
+            <span className="muted small">({links.length})</span>
           </span>
         </button>
       </div>
       {open && (
         <div style={{ marginTop: "8px" }}>
           {links.length > 0 && (
-            <ul className="list trip-places-list" style={{ marginBottom: "8px" }}>
+            <ul
+              className="list trip-places-list"
+              style={{ marginBottom: "8px" }}
+            >
               {links.map((link) => (
-                <li
-                  key={link.id}
-                  className="list-item share-link-item"
-                >
+                <li key={link.id} className="list-item share-link-item">
                   <div className="share-link-main">
                     <div className="share-link-title-row">
                       <strong>{link.name}</strong>
@@ -292,7 +307,8 @@ function TripShareLinks({
                       )}
                     </div>
                     <div className="share-link-stats">
-                      {t("share.delay")}: {link.delay_hours}h · {t("share.blur")}: {link.blur_meters}m
+                      {t("share.delay")}: {link.delay_hours}h ·{" "}
+                      {t("share.blur")}: {link.blur_meters}m
                     </div>
                   </div>
                   <div className="actions share-link-actions">

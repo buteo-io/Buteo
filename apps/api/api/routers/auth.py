@@ -29,7 +29,7 @@ from tracker_core.store.security import (
 )
 from tracker_core.store.tenant_db_manager import tenant_db_manager
 
-from ..deps import current_user, get_current_claims, TokenClaims
+from ..deps import TokenClaims, current_user, get_current_claims
 from ..limiter import limiter
 
 logger = logging.getLogger(__name__)
@@ -218,7 +218,7 @@ async def logout(
         if claims is not None:
             try:
                 tenant = await identity_db.scalar(
-                    select(Tenant).where(Tenant.tenant_id == claims.tenant_id)
+                    select(Tenant).where(Tenant.tenant_id == claims.tenant_id),
                 )
                 if tenant and tenant.token_version == claims.token_version:
                     tenant.token_version = (tenant.token_version or 0) + 1

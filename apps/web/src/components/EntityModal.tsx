@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { api, Place, OvernightSpot, PlaceMedia, OvernightSpotMedia, MediaItem } from "../api";
+import { api, Place, OvernightSpot, MediaItem } from "../api";
 import { Field, Modal } from "./Modal";
 import { useEntityForm } from "../hooks/useEntityForm";
 
@@ -22,12 +22,15 @@ type Props<T extends Place | OvernightSpot, M extends MediaItem> = {
   savingButtonText?: string;
 };
 
-export function EntityModal<T extends Place | OvernightSpot, M extends MediaItem>({
+export function EntityModal<
+  T extends Place | OvernightSpot,
+  M extends MediaItem,
+>({
   mode,
   entityType,
   entity,
-  lat,
-  lon,
+  lat: _lat,
+  lon: _lon,
   onClose,
   onSubmit,
   fetchMedia,
@@ -53,7 +56,7 @@ export function EntityModal<T extends Place | OvernightSpot, M extends MediaItem
     handleSubmit,
     handleUpload,
     handleDeleteMedia,
-  } = useEntityForm<T, M>({
+  } = useEntityForm<M>({
     initialName: entity?.name ?? "",
     initialNotes: entity?.notes ?? "",
     entityId: entity?.id,
@@ -64,8 +67,11 @@ export function EntityModal<T extends Place | OvernightSpot, M extends MediaItem
     onMediaChange,
   });
 
-  const title = t(`entityModal.title${mode === "create" ? "New" : "Edit"}_${entityType}`);
-  const defaultSubmitText = mode === "create" ? t("places.create") : t("common.saveChanges");
+  const title = t(
+    `entityModal.title${mode === "create" ? "New" : "Edit"}_${entityType}`,
+  );
+  const defaultSubmitText =
+    mode === "create" ? t("places.create") : t("common.saveChanges");
   const activeSavingButtonText = savingButtonText || t("common.saving");
 
   return (
@@ -84,7 +90,11 @@ export function EntityModal<T extends Place | OvernightSpot, M extends MediaItem
             onClick={handleSubmit}
             disabled={saving || uploading || !name.trim()}
           >
-            {saving ? activeSavingButtonText : (uploading ? t("common.uploading") : submitButtonText || defaultSubmitText)}
+            {saving
+              ? activeSavingButtonText
+              : uploading
+                ? t("common.uploading")
+                : submitButtonText || defaultSubmitText}
           </button>
         </>
       }
@@ -138,7 +148,15 @@ export function EntityModal<T extends Place | OvernightSpot, M extends MediaItem
               </div>
             ))}
           </div>
-          <div className="file-upload" style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
+          <div
+            className="file-upload"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginTop: "8px",
+            }}
+          >
             <button
               type="button"
               className="ghost small"
@@ -148,7 +166,9 @@ export function EntityModal<T extends Place | OvernightSpot, M extends MediaItem
               {t("entityModal.chooseFile")}
             </button>
             <span className="muted small">
-              {uploading ? t("common.uploading") : t("entityModal.noFileChosen")}
+              {uploading
+                ? t("common.uploading")
+                : t("entityModal.noFileChosen")}
             </span>
           </div>
           <input

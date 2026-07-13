@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
@@ -15,7 +15,7 @@ from .conftest import Account
 
 async def _seed_positions(device_id: int) -> tuple[datetime, datetime]:
     """Insert a tiny straight track 0..10min @ ~60 km/h. Returns (start, end)."""
-    start = datetime(2025, 6, 1, 8, tzinfo=timezone.utc)
+    start = datetime(2025, 6, 1, 8, tzinfo=UTC)
     async with SessionLocal() as s:
         for i in range(11):
             s.add(
@@ -165,7 +165,7 @@ async def test_trip_400_when_window_inverted(
     authed: httpx.AsyncClient,
     account: Account,
 ):
-    start = datetime.now(tz=timezone.utc)
+    start = datetime.now(tz=UTC)
     end = start - timedelta(minutes=1)
     r = await authed.post(
         "/trips",
@@ -178,7 +178,7 @@ async def test_trip_404_when_device_not_owned(
     other_authed: httpx.AsyncClient,
     account: Account,
 ):
-    start = datetime(2025, 6, 1, 8, tzinfo=timezone.utc)
+    start = datetime(2025, 6, 1, 8, tzinfo=UTC)
     end = start + timedelta(minutes=5)
     r = await other_authed.post(
         "/trips",
@@ -197,7 +197,7 @@ async def test_trip_isolation(
     other_authed: httpx.AsyncClient,
     account: Account,
 ):
-    start = datetime(2025, 6, 1, 8, tzinfo=timezone.utc)
+    start = datetime(2025, 6, 1, 8, tzinfo=UTC)
     end = start + timedelta(minutes=5)
     r = await authed.post(
         "/trips",
@@ -222,7 +222,7 @@ async def test_trip_deletion_cleans_media_files(
 
     monkeypatch.setattr(AppConfig, "data_dir", str(tmp_path))
 
-    start = datetime.now(timezone.utc) - timedelta(days=10)
+    start = datetime.now(UTC) - timedelta(days=10)
     end = start + timedelta(hours=5)
     r = await authed.post(
         "/trips",
@@ -233,11 +233,11 @@ async def test_trip_deletion_cleans_media_files(
     trip_id = trip["id"]
     trip_public_id = trip_id
 
-    recent_stay = datetime.now(timezone.utc) - timedelta(hours=10)
+    recent_stay = datetime.now(UTC) - timedelta(hours=10)
     async with SessionLocal() as s:
         trip_db = (
             await s.execute(
-                select(TripModel).where(TripModel.public_id == trip_public_id)
+                select(TripModel).where(TripModel.public_id == trip_public_id),
             )
         ).scalar_one()
 
@@ -258,7 +258,8 @@ async def test_trip_deletion_cleans_media_files(
     png_content = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
     files = {"file": ("recent.png", png_content, "image/png")}
     r_upload = await authed.post(
-        f"/overnight-spots/{spot_public_id}/media", files=files
+        f"/overnight-spots/{spot_public_id}/media",
+        files=files,
     )
     assert r_upload.status_code == 200, r_upload.text
 
@@ -275,7 +276,7 @@ async def test_trip_deletion_cleans_media_files(
     async with SessionLocal() as s:
         spot_in_db = (
             await s.execute(
-                select(OvernightSpot).where(OvernightSpot.public_id == spot_public_id)
+                select(OvernightSpot).where(OvernightSpot.public_id == spot_public_id),
             )
         ).scalar_one_or_none()
         assert spot_in_db is None
@@ -284,7 +285,7 @@ async def test_trip_deletion_cleans_media_files(
 @pytest.mark.asyncio
 async def test_trip_gpx_export(authed: httpx.AsyncClient, account: Account):
     # Seed position with full tracker data
-    start = datetime(2025, 6, 1, 8, tzinfo=timezone.utc)
+    start = datetime(2025, 6, 1, 8, tzinfo=UTC)
     async with SessionLocal() as s:
         s.add(
             Position(
@@ -295,7 +296,7 @@ async def test_trip_gpx_export(authed: httpx.AsyncClient, account: Account):
                 speed=36.0,  # 36 km/h = 10 m/s
                 altitude=450.0,
                 satellites=12,
-            )
+            ),
         )
         await s.commit()
 
@@ -303,7 +304,9 @@ async def test_trip_gpx_export(authed: httpx.AsyncClient, account: Account):
     r = await authed.post(
         "/trips",
         json=_trip_payload(
-            str(account.device_pid), start, start + timedelta(minutes=5)
+            str(account.device_pid),
+            start,
+            start + timedelta(minutes=5),
         ),
     )
     assert r.status_code == 200
@@ -340,7 +343,7 @@ async def _seed_trip(device_id: int) -> str:
     """Insert a trip directly into the DB and return its public_id."""
     from tracker_core.store.models import Trip
 
-    start = datetime(2025, 7, 1, 8, tzinfo=timezone.utc)
+    start = datetime(2025, 7, 1, 8, tzinfo=UTC)
     ended = start + timedelta(hours=3)
     async with SessionLocal() as s:
         t = Trip(
@@ -356,7 +359,8 @@ async def _seed_trip(device_id: int) -> str:
 
 
 async def test_read_only_account_blocked_from_mutations(
-    read_only_authed: httpx.AsyncClient, account: Account
+    read_only_authed: httpx.AsyncClient,
+    account: Account,
 ):
     """read_only feature flag → 403 on every mutating endpoint; reads still work.
 
@@ -366,7 +370,7 @@ async def test_read_only_account_blocked_from_mutations(
     trip_id = await _seed_trip(account.device_id)
     c = read_only_authed
 
-    start = datetime(2025, 6, 1, 8, tzinfo=timezone.utc)
+    start = datetime(2025, 6, 1, 8, tzinfo=UTC)
     ended = start + timedelta(hours=2)
     trip_payload = {
         "device_id": str(account.device_pid),

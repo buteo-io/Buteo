@@ -60,6 +60,9 @@ async def history(
     d = await own_device(db, user, device_id)
     rows = await positions_in_window(db, d.id, from_, to, limit=limit)
     logger.info(
-        "list_positions user_id=%s device_id=%s count=%d", user.id, device_id, len(rows)
+        "list_positions user_id=%s device_id=%s count=%d",
+        user.id,
+        device_id,
+        len(rows),
     )
     return [PositionOut.model_validate(p) for p in rows]

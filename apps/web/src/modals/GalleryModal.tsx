@@ -9,17 +9,19 @@ type Props = {
   onClose: () => void;
 };
 
-export function GalleryModal({ 
-  media, 
-  initialIdx = null, 
+export function GalleryModal({
+  media,
+  initialIdx = null,
   getMediaUrl = (id) => api.serveMedia(id),
-  onClose 
+  onClose,
 }: Props) {
   const { t } = useTranslation();
   const [idx, setIdx] = useState<number | null>(initialIdx);
 
-  const prev = () => setIdx((i) => (i !== null && i > 0 ? i - 1 : media.length - 1));
-  const next = () => setIdx((i) => (i !== null && i < media.length - 1 ? i + 1 : 0));
+  const prev = () =>
+    setIdx((i) => (i !== null && i > 0 ? i - 1 : media.length - 1));
+  const next = () =>
+    setIdx((i) => (i !== null && i < media.length - 1 ? i + 1 : 0));
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -43,11 +45,17 @@ export function GalleryModal({
         <div className="gallery-grid-wrap" onClick={(e) => e.stopPropagation()}>
           <div className="gallery-grid-header">
             <span>{t("entityModal.media")}</span>
-            <button className="gallery-close-inline" onClick={onClose}>×</button>
+            <button className="gallery-close-inline" onClick={onClose}>
+              ×
+            </button>
           </div>
           <div className="gallery-grid">
             {media.map((m, i) => (
-              <div key={m.id} className="gallery-grid-item" onClick={() => setIdx(i)}>
+              <div
+                key={m.id}
+                className="gallery-grid-item"
+                onClick={() => setIdx(i)}
+              >
                 {m.media_type === "image" ? (
                   <img src={getMediaUrl(m.id)} alt={m.filename_original} />
                 ) : m.media_type === "video" ? (
@@ -71,7 +79,11 @@ export function GalleryModal({
 
   return (
     <div className="gallery-overlay" onClick={() => setIdx(null)}>
-      <button className="gallery-close" onClick={() => setIdx(null)} aria-label={t("gallery.backToGrid")}>
+      <button
+        className="gallery-close"
+        onClick={() => setIdx(null)}
+        aria-label={t("gallery.backToGrid")}
+      >
         ×
       </button>
       <div className="gallery-content" onClick={(e) => e.stopPropagation()}>
@@ -81,7 +93,10 @@ export function GalleryModal({
           <img src={getMediaUrl(curr.id)} alt={curr.filename_original} />
         )}
         <div className="gallery-info">
-          <div className="gallery-filename">{curr.filename_original || (curr as any).entityName}</div>
+          <div className="gallery-filename">
+            {curr.filename_original ||
+              (curr as { entityName?: string }).entityName}
+          </div>
           {media.length > 1 && (
             <div className="gallery-counter">
               {idx + 1} / {media.length}
@@ -116,4 +131,3 @@ export function GalleryModal({
     </div>
   );
 }
-

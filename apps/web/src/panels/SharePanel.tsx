@@ -64,8 +64,8 @@ export function SharePanel({
       setCreating(false);
       onClearPrefill?.();
       onRefresh();
-    } catch (e: any) {
-      onToast(translateError(e.message));
+    } catch (e: unknown) {
+      onToast(translateError(e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -85,8 +85,8 @@ export function SharePanel({
       setEditingId(null);
       onClearPrefill?.();
       onRefresh();
-    } catch (e: any) {
-      onToast(translateError(e.message));
+    } catch (e: unknown) {
+      onToast(translateError(e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -100,8 +100,8 @@ export function SharePanel({
         onClearPrefill?.();
       }
       onRefresh();
-    } catch (e: any) {
-      onToast(e.message);
+    } catch (e: unknown) {
+      onToast(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -110,8 +110,8 @@ export function SharePanel({
       const rotated = await api.rotateShareLink(id);
       handleCopyLink(rotated.token);
       onRefresh();
-    } catch (e: any) {
-      onToast(e.message);
+    } catch (e: unknown) {
+      onToast(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -130,7 +130,13 @@ export function SharePanel({
           <div className="modal share-modal">
             <div className="modal-header">
               <h3>{editingId ? t("share.editLink") : t("share.newLink")}</h3>
-              <button type="button" className="modal-close" onClick={editingId ? handleCancelEdit : handleCancelCreate}>×</button>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={editingId ? handleCancelEdit : handleCancelCreate}
+              >
+                ×
+              </button>
             </div>
             <div className="modal-body">
               {creating && (
@@ -149,7 +155,7 @@ export function SharePanel({
               )}
               {editingId && (
                 <ShareLinkForm
-                  link={shareLinks.find(l => l.id === editingId)}
+                  link={shareLinks.find((l) => l.id === editingId)}
                   trips={trips}
                   onSave={(data) => handleSaveEdit(editingId, data)}
                   onCancel={handleCancelEdit}
@@ -240,18 +246,29 @@ type FormProps = {
   onDelete?: (id: string) => void;
 };
 
-function ShareLinkForm({ link, trips, prefilledTripId, onSave, onCancel, onDelete }: FormProps) {
+function ShareLinkForm({
+  link,
+  trips,
+  prefilledTripId,
+  onSave,
+  onCancel,
+  onDelete,
+}: FormProps) {
   const { t } = useTranslation();
   const [name, setName] = useState(
     link?.name ||
       (prefilledTripId
         ? `Share - ${trips.find((t) => t.id === prefilledTripId)?.name || ""}`
-        : "")
+        : ""),
   );
   const [description, setDescription] = useState(link?.description || "");
-  const [tripId, setTripId] = useState(link?.trip_id || prefilledTripId || trips[0]?.id || "");
+  const [tripId, setTripId] = useState(
+    link?.trip_id || prefilledTripId || trips[0]?.id || "",
+  );
   const [useDelay, setUseDelay] = useState(link ? link.delay_hours > 0 : true);
-  const [delayHours, setDelayHours] = useState<number | "">(link?.delay_hours ?? 72);
+  const [delayHours, setDelayHours] = useState<number | "">(
+    link?.delay_hours ?? 72,
+  );
   const [useBlur, setUseBlur] = useState(link ? link.blur_meters > 0 : true);
   const [blurMeters, setBlurMeters] = useState(link?.blur_meters ?? 500);
   const [isActive, setIsActive] = useState(link?.is_active ?? true);
@@ -260,18 +277,20 @@ function ShareLinkForm({ link, trips, prefilledTripId, onSave, onCancel, onDelet
   const [showPassword, setShowPassword] = useState(false);
   const [places, setPlaces] = useState<Place[]>([]);
   const [placesLoading, setPlacesLoading] = useState(false);
-  const [shareAllPlaces, setShareAllPlaces] = useState(link ? link.place_ids.length > 0 : false);
+  const [shareAllPlaces, setShareAllPlaces] = useState(
+    link ? link.place_ids.length > 0 : false,
+  );
   const [selectedPlaceIds, setSelectedPlaceIds] = useState<Set<string>>(
-    new Set(link?.place_ids ?? [])
+    new Set(link?.place_ids ?? []),
   );
   const [overnightSpots, setOvernightSpots] = useState<OvernightSpot[]>([]);
   const [overnightSpotsLoading, setOvernightSpotsLoading] = useState(false);
-  const [shareAllOvernightSpots, setShareAllOvernightSpots] = useState(link ? link.overnight_spot_ids.length > 0 : false);
-  const [selectedOvernightSpotIds, setSelectedOvernightSpotIds] = useState<Set<string>>(
-    new Set(link?.overnight_spot_ids ?? [])
+  const [shareAllOvernightSpots, setShareAllOvernightSpots] = useState(
+    link ? link.overnight_spot_ids.length > 0 : false,
   );
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-
+  const [selectedOvernightSpotIds, setSelectedOvernightSpotIds] = useState<
+    Set<string>
+  >(new Set(link?.overnight_spot_ids ?? []));
   const effectiveTripId = link?.trip_id ?? tripId;
 
   useEffect(() => {
@@ -280,19 +299,19 @@ function ShareLinkForm({ link, trips, prefilledTripId, onSave, onCancel, onDelet
       return;
     }
     setPlacesLoading(true);
-    api.tripPlaces(effectiveTripId)
+    api
+      .tripPlaces(effectiveTripId)
       .then(setPlaces)
       .catch(() => setPlaces([]))
       .finally(() => setPlacesLoading(false));
 
     setOvernightSpotsLoading(true);
-    api.tripOvernightSpots(effectiveTripId)
+    api
+      .tripOvernightSpots(effectiveTripId)
       .then(setOvernightSpots)
       .catch(() => setOvernightSpots([]))
       .finally(() => setOvernightSpotsLoading(false));
   }, [effectiveTripId]);
-
-  const selectedTrip = trips.find((t) => t.id === effectiveTripId);
 
   const toInt = (value: string, fallback: number) => {
     const parsed = Number.parseInt(value, 10);
@@ -380,8 +399,11 @@ function ShareLinkForm({ link, trips, prefilledTripId, onSave, onCancel, onDelet
     }
   };
 
-  const allSelected = places.length > 0 && places.every((p) => selectedPlaceIds.has(p.id));
-  const allOvernightSpotsSelected = overnightSpots.length > 0 && overnightSpots.every((s) => selectedOvernightSpotIds.has(s.id));
+  const allSelected =
+    places.length > 0 && places.every((p) => selectedPlaceIds.has(p.id));
+  const allOvernightSpotsSelected =
+    overnightSpots.length > 0 &&
+    overnightSpots.every((s) => selectedOvernightSpotIds.has(s.id));
 
   return (
     <form onSubmit={handleSubmit} className="share-form">
@@ -500,14 +522,20 @@ function ShareLinkForm({ link, trips, prefilledTripId, onSave, onCancel, onDelet
         {usePassword && (
           <div className="field share-delay-field">
             <label className="field-label">
-              {link?.has_password ? t("share.newPassword") : t("share.password")}
+              {link?.has_password
+                ? t("share.newPassword")
+                : t("share.password")}
             </label>
             <div className="password-input-wrapper">
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={link?.has_password ? "•••••••• (leave blank to keep)" : "Enter password"}
+                placeholder={
+                  link?.has_password
+                    ? "•••••••• (leave blank to keep)"
+                    : "Enter password"
+                }
                 maxLength={256}
               />
               <button
@@ -521,8 +549,13 @@ function ShareLinkForm({ link, trips, prefilledTripId, onSave, onCancel, onDelet
               </button>
             </div>
             {link?.has_password && (
-              <div className="field-hint" style={{ color: "var(--text-muted)", marginTop: "0.25rem" }}>
-                This link currently has password protection enabled. Enter a new password to change it, or uncheck password protection to remove it.
+              <div
+                className="field-hint"
+                style={{ color: "var(--text-muted)", marginTop: "0.25rem" }}
+              >
+                This link currently has password protection enabled. Enter a new
+                password to change it, or uncheck password protection to remove
+                it.
               </div>
             )}
           </div>
@@ -547,11 +580,24 @@ function ShareLinkForm({ link, trips, prefilledTripId, onSave, onCancel, onDelet
                 checked={allSelected}
                 onChange={toggleAll}
               />
-              <span>{t("share.allPlaces")} ({places.length})</span>
+              <span>
+                {t("share.allPlaces")} ({places.length})
+              </span>
             </label>
-            <div className="share-place-group-items" style={{ paddingLeft: "1.5rem", marginTop: "0.5rem" }}>
+            <div
+              className="share-place-group-items"
+              style={{ paddingLeft: "1.5rem", marginTop: "0.5rem" }}
+            >
               {places.map((place) => (
-                <label key={place.id} className="share-place-item" style={{ display: "flex", gap: "0.5rem", marginBottom: "0.25rem" }}>
+                <label
+                  key={place.id}
+                  className="share-place-item"
+                  style={{
+                    display: "flex",
+                    gap: "0.5rem",
+                    marginBottom: "0.25rem",
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={selectedPlaceIds.has(place.id)}
@@ -582,30 +628,33 @@ function ShareLinkForm({ link, trips, prefilledTripId, onSave, onCancel, onDelet
           <span>{t("share.shareOvernightSpots")}</span>
         </label>
 
-        {(shareAllOvernightSpots || selectedOvernightSpotIds.size > 0) && overnightSpots.length > 0 && (
-          <div className="share-places-tree">
-            <label className="share-place-all">
-              <input
-                type="checkbox"
-                checked={allOvernightSpotsSelected}
-                onChange={toggleAllOvernightSpots}
-              />
-              <span>{t("share.allOvernightSpots")} ({overnightSpots.length})</span>
-            </label>
-            <div className="share-place-group-items">
-              {overnightSpots.map((spot) => (
-                <label key={spot.id} className="share-place-item">
-                  <input
-                    type="checkbox"
-                    checked={selectedOvernightSpotIds.has(spot.id)}
-                    onChange={() => toggleOvernightSpot(spot.id)}
-                  />
-                  <span>{spot.name}</span>
-                </label>
-              ))}
+        {(shareAllOvernightSpots || selectedOvernightSpotIds.size > 0) &&
+          overnightSpots.length > 0 && (
+            <div className="share-places-tree">
+              <label className="share-place-all">
+                <input
+                  type="checkbox"
+                  checked={allOvernightSpotsSelected}
+                  onChange={toggleAllOvernightSpots}
+                />
+                <span>
+                  {t("share.allOvernightSpots")} ({overnightSpots.length})
+                </span>
+              </label>
+              <div className="share-place-group-items">
+                {overnightSpots.map((spot) => (
+                  <label key={spot.id} className="share-place-item">
+                    <input
+                      type="checkbox"
+                      checked={selectedOvernightSpotIds.has(spot.id)}
+                      onChange={() => toggleOvernightSpot(spot.id)}
+                    />
+                    <span>{spot.name}</span>
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {overnightSpotsLoading && (
           <div className="muted small">{t("share.loadingOvernightSpots")}</div>
@@ -695,4 +744,3 @@ function EyeOffIcon() {
     </svg>
   );
 }
-

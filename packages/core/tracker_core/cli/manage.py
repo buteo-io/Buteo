@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import click
@@ -239,7 +239,7 @@ def revoke_device(imei: str) -> None:
         async with SessionLocal() as s:
             d = await s.scalar(select(Device).where(Device.imei == imei))
             if d:
-                d.revoked_at = datetime.now(tz=timezone.utc)
+                d.revoked_at = datetime.now(tz=UTC)
                 await s.commit()
             click.echo(f"revoked device imei={imei} and removed identity routing")
 
@@ -330,7 +330,6 @@ def list_devices() -> None:
 @cli.command("delete-tenant")
 @click.option("--tenant-id", required=True)
 def delete_tenant(tenant_id: str) -> None:
-
     async def _():
         async with IdentitySessionLocal() as id_s:
             tenant = await id_s.scalar(select(Tenant).where(Tenant.tenant_id == tenant_id))
@@ -363,7 +362,6 @@ def delete_tenant(tenant_id: str) -> None:
 @cli.group("features")
 def features_group() -> None:
     """Manage tenant feature flags."""
-    pass
 
 
 @features_group.command("available")

@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-import hmac
-import hashlib
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -95,7 +95,7 @@ class PublicShareOut(UTCModel):
     blur_meters: int
     positions: list[PublicPositionOut]
     places: list[PublicPlaceOut]
-    overnight_spots: list[PublicOvernightSpotOut] = []
+    overnight_spots: list[PublicOvernightSpotOut] = Field(default_factory=list)
 
 
 def _degrade_coordinate(coord: float, meters: int, lat: float | None = None) -> float:
@@ -114,10 +114,7 @@ def _degrade_coordinate(coord: float, meters: int, lat: float | None = None) -> 
 
     import math
 
-    if lat is not None:
-        degrees_per_meter = 1 / (111320 * math.cos(math.radians(lat)))
-    else:
-        degrees_per_meter = 1 / 111320
+    degrees_per_meter = 1 / (111320 * math.cos(math.radians(lat))) if lat is not None else 1 / 111320
 
     degrees = meters * degrees_per_meter
     return round(coord / degrees) * degrees
@@ -128,12 +125,13 @@ def _align_timezone(dt: datetime, reference: datetime) -> datetime:
     if reference.tzinfo is None and dt.tzinfo is not None:
         return dt.replace(tzinfo=None)
     if reference.tzinfo is not None and dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
+        return dt.replace(tzinfo=UTC)
     return dt
 
 
 def _effective_share_window(
-    link: ShareLink, now_utc: datetime
+    link: ShareLink,
+    now_utc: datetime,
 ) -> tuple[datetime, datetime]:
     """Clamp effective share window to trip bounds + delay cutoff."""
     trip = link.trip
@@ -169,10 +167,12 @@ def _verify_unlock_cookie_value(link_public_id: str, cookie_value: str) -> bool:
             return False
         timestamp_string, signature_hex = cookie_parts
         timestamp_seconds = int(timestamp_string)
-        if datetime.now(timezone.utc).timestamp() > timestamp_seconds:
+        if datetime.now(UTC).timestamp() > timestamp_seconds:
             return False
         payload_string = f"{link_public_id}:{timestamp_seconds}"
-        expected_signature = hmac.new(AppConfig.jwt_secret.encode(), payload_string.encode(), hashlib.sha256).hexdigest()
+        expected_signature = hmac.new(
+            AppConfig.jwt_secret.encode(), payload_string.encode(), hashlib.sha256
+        ).hexdigest()
         return hmac.compare_digest(signature_hex, expected_signature)
     except Exception:
         return False
@@ -186,7 +186,7 @@ def _check_share_password_auth(link: ShareLink, request: Request) -> None:
     if not cookie_value or not _verify_unlock_cookie_value(link.public_id, cookie_value):
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED,
-            detail="PASSWORD_REQUIRED"
+            detail="PASSWORD_REQUIRED",
         )
 
 
@@ -210,7 +210,8 @@ async def verify_share_password(
 
     if not link or not link.is_active:
         raise HTTPException(
-            status.HTTP_404_NOT_FOUND, "Share link not found or inactive"
+            status.HTTP_404_NOT_FOUND,
+            "Share link not found or inactive",
         )
 
     if link.password_hash is None:
@@ -219,11 +220,11 @@ async def verify_share_password(
     if not verify_password(body.password, link.password_hash):
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect password"
+            detail="Incorrect password",
         )
 
     response_obj = Response(content='{"ok": true}', media_type="application/json")
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    expires_at = datetime.now(UTC) + timedelta(days=7)
     response_obj.set_cookie(
         key=f"share_unlock_{link.public_id}",
         value=_generate_unlock_cookie_value(link.public_id, expires_at),
@@ -258,13 +259,14 @@ async def get_public_share(
 
     if not link or not link.is_active:
         raise HTTPException(
-            status.HTTP_404_NOT_FOUND, "Share link not found or inactive"
+            status.HTTP_404_NOT_FOUND,
+            "Share link not found or inactive",
         )
 
     _check_share_password_auth(link, request)
 
     trip = link.trip
-    now_utc = datetime.now(timezone.utc)
+    now_utc = datetime.now(UTC)
     start, end = _effective_share_window(link, now_utc)
 
     positions = []
@@ -317,11 +319,7 @@ async def get_public_share(
             sampled_ids = (await db.execute(sampled_ids_stmt)).scalars().all()
 
             if sampled_ids:
-                stmt = (
-                    select(Position)
-                    .where(Position.id.in_(sampled_ids))
-                    .order_by(Position.time_id)
-                )
+                stmt = select(Position).where(Position.id.in_(sampled_ids)).order_by(Position.time_id)
                 result = await db.execute(stmt)
                 positions = result.scalars().all()
 
@@ -338,7 +336,7 @@ async def get_public_share(
     media_by_place = {}
     if place_ids:
         media_stmt = await db.execute(
-            select(PlaceMedia).where(PlaceMedia.place_id.in_(place_ids))
+            select(PlaceMedia).where(PlaceMedia.place_id.in_(place_ids)),
         )
         for m in media_stmt.scalars().all():
             media_by_place.setdefault(m.place_id, []).append(m)
@@ -371,8 +369,8 @@ async def get_public_share(
     if spot_ids:
         media_stmt = await db.execute(
             select(OvernightSpotMedia).where(
-                OvernightSpotMedia.overnight_spot_id.in_(spot_ids)
-            )
+                OvernightSpotMedia.overnight_spot_id.in_(spot_ids),
+            ),
         )
         for m in media_stmt.scalars().all():
             media_by_spot.setdefault(m.overnight_spot_id, []).append(m)
@@ -439,14 +437,15 @@ async def serve_share_media(
 
     if not link or not link.is_active:
         raise HTTPException(
-            status.HTTP_404_NOT_FOUND, "Share link not found or inactive"
+            status.HTTP_404_NOT_FOUND,
+            "Share link not found or inactive",
         )
 
     _check_share_password_auth(link, request)
 
     # Check PlaceMedia first
     media_stmt = await db.execute(
-        select(PlaceMedia).where(PlaceMedia.public_id == media_id)
+        select(PlaceMedia).where(PlaceMedia.public_id == media_id),
     )
     media = media_stmt.scalar_one_or_none()
     entity = None
@@ -458,7 +457,7 @@ async def serve_share_media(
             .where(
                 Place.id == media.place_id,
                 share_link_places.c.share_link_id == link.id,
-            )
+            ),
         )
         place = place_stmt.scalar_one_or_none()
         if place:
@@ -467,7 +466,7 @@ async def serve_share_media(
     # Check OvernightSpotMedia if not found in places
     if not entity:
         media_stmt = await db.execute(
-            select(OvernightSpotMedia).where(OvernightSpotMedia.public_id == media_id)
+            select(OvernightSpotMedia).where(OvernightSpotMedia.public_id == media_id),
         )
         media = media_stmt.scalar_one_or_none()
         if media:
@@ -480,12 +479,12 @@ async def serve_share_media(
                 .where(
                     OvernightSpot.id == media.overnight_spot_id,
                     share_link_overnight_spots.c.share_link_id == link.id,
-                )
+                ),
             )
             spot = spot_stmt.scalar_one_or_none()
             if spot:
                 # Calculate effective share window end
-                now_utc = datetime.now(timezone.utc)
+                now_utc = datetime.now(UTC)
                 _, end = _effective_share_window(link, now_utc)
 
                 # If OvernightSpotMedia, check delay limit
@@ -493,7 +492,8 @@ async def serve_share_media(
                     spot_last_stay = _align_timezone(spot.last_stay_at, end)
                     if spot_last_stay > end:
                         raise HTTPException(
-                            status.HTTP_404_NOT_FOUND, "Media not found"
+                            status.HTTP_404_NOT_FOUND,
+                            "Media not found",
                         )
 
                 entity = spot

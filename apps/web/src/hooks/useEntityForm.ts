@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { MediaItem } from "../api";
 
-export type UseEntityFormOptions<T, M> = {
+export type UseEntityFormOptions<M> = {
   initialName: string;
   initialNotes: string;
   entityId?: string;
@@ -12,7 +12,7 @@ export type UseEntityFormOptions<T, M> = {
   onMediaChange?: (media: M[]) => void;
 };
 
-export function useEntityForm<T, M extends MediaItem>({
+export function useEntityForm<M extends MediaItem>({
   initialName,
   initialNotes,
   entityId,
@@ -21,7 +21,7 @@ export function useEntityForm<T, M extends MediaItem>({
   deleteMedia,
   onSubmit,
   onMediaChange,
-}: UseEntityFormOptions<T, M>) {
+}: UseEntityFormOptions<M>) {
   const [name, setName] = useState(initialName);
   const [notes, setNotes] = useState(initialNotes);
   const [media, setMedia] = useState<M[]>([]);
@@ -57,8 +57,8 @@ export function useEntityForm<T, M extends MediaItem>({
     setError(null);
     try {
       await onSubmit({ name: name.trim(), notes: notes.trim() });
-    } catch (e: any) {
-      setError(e?.message || "Failed to save");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -76,8 +76,8 @@ export function useEntityForm<T, M extends MediaItem>({
         onMediaChangeRef.current?.(next);
         return next;
       });
-    } catch (e: any) {
-      setError(e?.message || "Failed to upload");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to upload");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -95,8 +95,8 @@ export function useEntityForm<T, M extends MediaItem>({
         onMediaChangeRef.current?.(next);
         return next;
       });
-    } catch (e: any) {
-      setError(e?.message || "Failed to delete");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to delete");
     }
   };
 

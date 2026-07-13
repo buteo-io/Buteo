@@ -96,7 +96,9 @@ def _get_media_dir(spot: OvernightSpot) -> Path:
 
 
 async def _own_overnight_spot(
-    db: AsyncSession, user: User, spot_id: PrefixUUID
+    db: AsyncSession,
+    user: User,
+    spot_id: PrefixUUID,
 ) -> tuple[OvernightSpot, PrefixUUID]:
     """Fetch overnight spot and verify ownership via trip -> device -> user."""
     row = (
@@ -134,7 +136,8 @@ def _out(
 
 
 @router.post(
-    "/trips/{trip_id}/overnight-spots/detect", response_model=OvernightSpotDetectOut
+    "/trips/{trip_id}/overnight-spots/detect",
+    response_model=OvernightSpotDetectOut,
 )
 async def detect_overnight_spots(
     trip_id: PrefixUUID,
@@ -184,7 +187,7 @@ async def list_overnight_spots(
             await db.scalars(
                 select(OvernightSpotMedia)
                 .where(OvernightSpotMedia.overnight_spot_id.in_(spot_ids))
-                .order_by(OvernightSpotMedia.created_at.desc())
+                .order_by(OvernightSpotMedia.created_at.desc()),
             )
         ).all()
         for m in media_rows:
@@ -196,10 +199,7 @@ async def list_overnight_spots(
         trip_id,
         len(rows),
     )
-    return [
-        _out(spot, trip_public_id, media_by_spot.get(spot.id))
-        for spot, trip_public_id in rows
-    ]
+    return [_out(spot, trip_public_id, media_by_spot.get(spot.id)) for spot, trip_public_id in rows]
 
 
 @router.patch("/overnight-spots/{spot_id}", response_model=OvernightSpotOut)
@@ -221,7 +221,7 @@ async def update_overnight_spot(
     media_stmt = await db.execute(
         select(OvernightSpotMedia)
         .where(OvernightSpotMedia.overnight_spot_id == spot.id)
-        .order_by(OvernightSpotMedia.created_at.desc())
+        .order_by(OvernightSpotMedia.created_at.desc()),
     )
     media = list(media_stmt.scalars().all())
 
@@ -230,7 +230,8 @@ async def update_overnight_spot(
 
 
 @router.get(
-    "/overnight-spots/{spot_id}/media", response_model=list[OvernightSpotMediaOut]
+    "/overnight-spots/{spot_id}/media",
+    response_model=list[OvernightSpotMediaOut],
 )
 async def list_overnight_spot_media(
     spot_id: PrefixUUID,

@@ -30,7 +30,8 @@ async def test_dynamic_routing_end_to_end(
 
     # 3. Authenticate another Client as Tenant B (other_account)
     other_client = httpx.AsyncClient(
-        transport=client._transport, base_url="http://test"
+        transport=client._transport,
+        base_url="http://test",
     )
     async with other_client as oc:
         await _do_login(oc, other_account.email, other_account.password)

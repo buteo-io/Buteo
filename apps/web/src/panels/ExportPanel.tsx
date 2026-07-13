@@ -42,7 +42,8 @@ export function ExportPanel({ trips, onExport }: Props) {
 
         <div className="field">
           <label className="field-label">
-            {t("export.selectTrip")} <span style={{ color: "var(--bad)" }}>*</span>
+            {t("export.selectTrip")}{" "}
+            <span style={{ color: "var(--bad)" }}>*</span>
           </label>
           <Select
             value={tripId}

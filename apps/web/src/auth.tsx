@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 import { api, Me } from "./api";
 
 type Ctx = {
@@ -39,9 +45,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setMe(null);
   };
 
-  return <AuthCtx.Provider value={{ me, loading, login, logout }}>{children}</AuthCtx.Provider>;
+  return (
+    <AuthCtx.Provider value={{ me, loading, login, logout }}>
+      {children}
+    </AuthCtx.Provider>
+  );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): Ctx {
   const c = useContext(AuthCtx);
   if (!c) throw new Error("AuthProvider missing");

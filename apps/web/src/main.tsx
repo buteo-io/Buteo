@@ -10,7 +10,7 @@ import { MapStateProvider } from "./contexts/MapStateContext";
 import "./i18n";
 import "./styles.css";
 
-function AuthenticatedRoot() {
+export function AuthenticatedRoot() {
   const { me, loading } = useAuth();
   if (loading) return <div style={{ padding: 24 }}>...</div>;
   return me ? (
@@ -26,15 +26,15 @@ function AuthenticatedRoot() {
   );
 }
 
-function Root() {
+export function Root() {
   const path = window.location.pathname;
   const shareMatch = path.match(/^\/share\/([^/]+)$/);
-  
+
   if (shareMatch) {
     const token = shareMatch[1];
     return <PublicShare token={token} />;
   }
-  
+
   return (
     <AuthProvider>
       <AuthenticatedRoot />

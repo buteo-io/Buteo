@@ -1,8 +1,7 @@
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
-
 from ingest.codec8.codec8 import (
     MAX_FRAME_PAYLOAD,
     AvlRecord,
@@ -21,7 +20,7 @@ def test_imei_roundtrip():
 
 def test_codec8_roundtrip():
     rec = AvlRecord(
-        timestamp=datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
+        timestamp=datetime(2025, 1, 2, 3, 4, 5, tzinfo=UTC),
         priority=1,
         lon=13.405,
         lat=52.52,

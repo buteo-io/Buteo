@@ -5,10 +5,10 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import asdict, is_dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from tracker_core import analytics
@@ -48,9 +48,7 @@ def _attach(name: str, fmt: str) -> dict:
     ascii_fallback = _FILENAME_ASCII_SAFE.sub("_", raw).strip() or f"export.{fmt}"
     encoded = quote(raw, safe="")
     return {
-        "Content-Disposition": (
-            f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{encoded}"
-        ),
+        "Content-Disposition": (f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{encoded}"),
     }
 
 
@@ -138,7 +136,7 @@ async def mileage(
     """Bucketed distance driven, defaulting the window per granularity."""
     d = await own_device(db, user, device_id)
     if not to:
-        to = datetime.now(tz=timezone.utc)
+        to = datetime.now(tz=UTC)
     if not from_:
         from_ = to - _DEFAULT_MILEAGE_DELTA[granularity]
     pts = await positions_in_window_capped(db, d.id, from_, to)
@@ -169,7 +167,10 @@ async def export_gpx(
     d = await own_device(db, user, device_id)
     pts = await positions_in_window_capped(db, d.id, from_, to)
     logger.info(
-        "export_gpx user_id=%s device_id=%s points=%d", user.id, device_id, len(pts)
+        "export_gpx user_id=%s device_id=%s points=%d",
+        user.id,
+        device_id,
+        len(pts),
     )
     return StreamingResponse(
         analytics.to_gpx(pts, name=d.name),
@@ -190,7 +191,10 @@ async def export_csv(
     d = await own_device(db, user, device_id)
     pts = await positions_in_window_capped(db, d.id, from_, to)
     logger.info(
-        "export_csv user_id=%s device_id=%s points=%d", user.id, device_id, len(pts)
+        "export_csv user_id=%s device_id=%s points=%d",
+        user.id,
+        device_id,
+        len(pts),
     )
     return StreamingResponse(
         analytics.to_csv(pts),
