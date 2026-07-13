@@ -18,7 +18,14 @@ type Props = {
   onDelete?: (id: string) => Promise<void> | void;
 };
 
-export function TripModal({ state, device, overnightSpots, onClose, onSubmit, onDelete }: Props) {
+export function TripModal({
+  state,
+  device,
+  overnightSpots,
+  onClose,
+  onSubmit,
+  onDelete,
+}: Props) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -84,11 +91,15 @@ export function TripModal({ state, device, overnightSpots, onClose, onSubmit, on
     // Warn if narrowing the window would remove spots that have media
     if (state && state.mode === "edit") {
       const origStart = new Date(state.trip.started_at);
-      const origEnd = state.trip.ended_at ? new Date(state.trip.ended_at) : null;
+      const origEnd = state.trip.ended_at
+        ? new Date(state.trip.ended_at)
+        : null;
       const newStart = new Date(fromIso);
       const newEnd = endedAt ? new Date(endedAt) : null;
       const isNarrower =
-        newStart > origStart || (origEnd === null && newEnd !== null) || (origEnd !== null && newEnd !== null && newEnd < origEnd);
+        newStart > origStart ||
+        (origEnd === null && newEnd !== null) ||
+        (origEnd !== null && newEnd !== null && newEnd < origEnd);
       if (isNarrower) {
         const spotsWithMediaOutside = overnightSpots.filter((s) => {
           if (!s.media || s.media.length === 0) return false;
@@ -97,7 +108,11 @@ export function TripModal({ state, device, overnightSpots, onClose, onSubmit, on
           return stayAt < newStart || (newEnd !== null && stayAt > newEnd);
         });
         if (spotsWithMediaOutside.length > 0) {
-          const ok = window.confirm(t("trips.errors.narrowWindowMediaLoss", { count: spotsWithMediaOutside.length }));
+          const ok = window.confirm(
+            t("trips.errors.narrowWindowMediaLoss", {
+              count: spotsWithMediaOutside.length,
+            }),
+          );
           if (!ok) return;
         }
       }
@@ -115,8 +130,10 @@ export function TripModal({ state, device, overnightSpots, onClose, onSubmit, on
         },
         id,
       );
-    } catch (e: any) {
-      setSubmitError(e?.message || t("trips.errors.saveFailed"));
+    } catch (e: unknown) {
+      setSubmitError(
+        e instanceof Error ? e.message : t("trips.errors.saveFailed"),
+      );
     } finally {
       setSaving(false);
     }
@@ -135,7 +152,11 @@ export function TripModal({ state, device, overnightSpots, onClose, onSubmit, on
               className="ghost icon-btn-danger"
               style={{ marginRight: "auto" }}
               onClick={() => {
-                if (window.confirm(t("trip.confirmDelete", { name: state.trip.name }))) {
+                if (
+                  window.confirm(
+                    t("trip.confirmDelete", { name: state.trip.name }),
+                  )
+                ) {
                   void onDelete(state.trip.id);
                   onClose();
                 }
@@ -144,9 +165,19 @@ export function TripModal({ state, device, overnightSpots, onClose, onSubmit, on
               {t("common.delete")}
             </button>
           )}
-          <button className="ghost" onClick={onClose}>{t("common.cancel")}</button>
-          <button className="primary" onClick={submit} disabled={saving || !name.trim()}>
-            {saving ? t("common.saving") : isEdit ? t("common.saveChanges") : t("trips.new")}
+          <button className="ghost" onClick={onClose}>
+            {t("common.cancel")}
+          </button>
+          <button
+            className="primary"
+            onClick={submit}
+            disabled={saving || !name.trim()}
+          >
+            {saving
+              ? t("common.saving")
+              : isEdit
+                ? t("common.saveChanges")
+                : t("trips.new")}
           </button>
         </>
       }
@@ -168,7 +199,10 @@ export function TripModal({ state, device, overnightSpots, onClose, onSubmit, on
         />
       </Field>
       <div style={{ marginBottom: "12px" }}>
-        <span className="muted small" style={{ display: "block", marginBottom: "6px" }}>
+        <span
+          className="muted small"
+          style={{ display: "block", marginBottom: "6px" }}
+        >
           {t("dateRange.quickPresets")}:
         </span>
         <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
@@ -237,11 +271,19 @@ export function TripModal({ state, device, overnightSpots, onClose, onSubmit, on
       </div>
       <div className="row gap responsive-row">
         <Field label={t("trips.fields.from")}>
-          <input type="datetime-local" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <input
+            type="datetime-local"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+          />
         </Field>
         {!ongoing && (
           <Field label={t("trips.fields.to")}>
-            <input type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)} />
+            <input
+              type="datetime-local"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+            />
           </Field>
         )}
       </div>
@@ -253,7 +295,9 @@ export function TripModal({ state, device, overnightSpots, onClose, onSubmit, on
         />
         <span>{t("trips.fields.ongoing")}</span>
       </label>
-      <div className="muted small">{t("trips.fields.device", { name: device.name })}</div>
+      <div className="muted small">
+        {t("trips.fields.device", { name: device.name })}
+      </div>
     </Modal>
   );
 }

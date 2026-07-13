@@ -29,7 +29,10 @@ export function PlaceTypeIcon({ type, size = 16, className }: Props) {
       return (
         <svg {...props}>
           <path d="M12 2a5 5 0 0 1 5 5c0 4-5 10-5 10S7 11 7 7a5 5 0 0 1 5-5z" />
-          <path d="M6 17a4 4 0 0 0 4 4M18 17a4 4 0 0 1-4 4" strokeDasharray="2 1" />
+          <path
+            d="M6 17a4 4 0 0 0 4 4M18 17a4 4 0 0 1-4 4"
+            strokeDasharray="2 1"
+          />
           <line x1="12" y1="21" x2="12" y2="23" />
         </svg>
       );

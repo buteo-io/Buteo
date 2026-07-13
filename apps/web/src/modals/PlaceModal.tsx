@@ -21,9 +21,18 @@ type Props = {
 
 const CATEGORIES = ["POI", "Drinking Water", "Camping", "Parking"] as const;
 
-export function PlaceModal({ state, trips, onClose, onSubmit, onMediaClick, onMediaChange }: Props) {
+export function PlaceModal({
+  state,
+  trips,
+  onClose,
+  onSubmit,
+  onMediaClick,
+  onMediaChange,
+}: Props) {
   const { t } = useTranslation();
-  const [chosenCategory, setChosenCategory] = useState<"POI" | "Drinking Water" | "Camping" | "Parking">("POI");
+  const [chosenCategory, setChosenCategory] = useState<
+    "POI" | "Drinking Water" | "Camping" | "Parking"
+  >("POI");
   const [chosenTrips, setChosenTrips] = useState<string[]>([]);
 
   useEffect(() => {
@@ -50,13 +59,15 @@ export function PlaceModal({ state, trips, onClose, onSubmit, onMediaClick, onMe
         place_category: chosenCategory,
         trip_ids: chosenTrips,
       },
-      state.mode === "edit" ? state.place.id : undefined
+      state.mode === "edit" ? state.place.id : undefined,
     );
   };
 
   const toggleTrip = (tid: string) => {
     setChosenTrips((current) =>
-      current.includes(tid) ? current.filter((x) => x !== tid) : [...current, tid]
+      current.includes(tid)
+        ? current.filter((x) => x !== tid)
+        : [...current, tid],
     );
   };
 
@@ -79,7 +90,10 @@ export function PlaceModal({ state, trips, onClose, onSubmit, onMediaClick, onMe
           ))}
         </div>
       </Field>
-      <Field label={t("places.fields.trips")} hint={t("places.fields.tripsHint")}>
+      <Field
+        label={t("places.fields.trips")}
+        hint={t("places.fields.tripsHint")}
+      >
         {trips.length === 0 ? (
           <div className="muted small">{t("trips.noTrips")}</div>
         ) : (
@@ -93,7 +107,9 @@ export function PlaceModal({ state, trips, onClose, onSubmit, onMediaClick, onMe
                   className={`chip ${active ? "active" : ""}`}
                   onClick={() => toggleTrip(tItem.id)}
                   title={`${new Date(tItem.started_at).toLocaleDateString()} → ${
-                    tItem.ended_at ? new Date(tItem.ended_at).toLocaleDateString() : t("common.now")
+                    tItem.ended_at
+                      ? new Date(tItem.ended_at).toLocaleDateString()
+                      : t("common.now")
                   }`}
                 >
                   {tItem.name}
@@ -125,9 +141,10 @@ export function PlaceModal({ state, trips, onClose, onSubmit, onMediaClick, onMe
         }
       }}
       extraFields={extraFields}
-      submitButtonText={state.mode === "create" ? t("places.create") : t("common.saveChanges")}
+      submitButtonText={
+        state.mode === "create" ? t("places.create") : t("common.saveChanges")
+      }
       savingButtonText={t("common.saving")}
     />
   );
 }
-

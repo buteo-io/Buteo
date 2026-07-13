@@ -15,7 +15,14 @@ type Args = {
 
 /** Poll `/devices/:id/positions/latest` every 5s while enabled. Pushes the
  *  fix onto the map and fits the view on first arrival. */
-export function useLivePoll({ deviceId, deviceName, imei, enabled, map, onError }: Args) {
+export function useLivePoll({
+  deviceId,
+  deviceName,
+  imei,
+  enabled,
+  map,
+  onError,
+}: Args) {
   const [latest, setLatest] = useState<Position | null>(null);
 
   useEffect(() => {
@@ -35,8 +42,8 @@ export function useLivePoll({ deviceId, deviceName, imei, enabled, map, onError 
             firstFit = false;
           }
         }
-      } catch (e: any) {
-        onError?.(e?.message || "live fetch failed");
+      } catch (e: unknown) {
+        onError?.(e instanceof Error ? e.message : "live fetch failed");
       }
     };
     void tick();

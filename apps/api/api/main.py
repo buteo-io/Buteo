@@ -68,7 +68,10 @@ def create_app() -> FastAPI:
     if not AppConfig.docs_enabled:
         docs_kwargs = {"docs_url": None, "redoc_url": None, "openapi_url": None}
     app = FastAPI(
-        title="Tracker API", version="0.1.0", lifespan=lifespan, **docs_kwargs
+        title="Tracker API",
+        version="0.1.0",
+        lifespan=lifespan,
+        **docs_kwargs,
     )
 
     # Rate limiter (slowapi) — shared instance used by auth.
@@ -91,7 +94,8 @@ def create_app() -> FastAPI:
         response = await call_next(request)
         ms = round((time.perf_counter() - t0) * 1000)
         client = request.headers.get(
-            "x-forwarded-for", request.client.host if request.client else "-"
+            "x-forwarded-for",
+            request.client.host if request.client else "-",
         )
         path = request.url.path
         if path.startswith("/share/"):
@@ -121,8 +125,7 @@ def create_app() -> FastAPI:
                     value=session_cookie,
                     max_age=AppConfig.jwt_expire_min * 60,
                     httponly=True,
-                    secure=AppConfig.auth_cookie_secure
-                    and not AppConfig.dev_insecure_cookies,
+                    secure=AppConfig.auth_cookie_secure and not AppConfig.dev_insecure_cookies,
                     samesite="strict",
                     path="/",
                 )
@@ -167,5 +170,6 @@ def create_app() -> FastAPI:
 
 app = create_app()
 logger.info(
-    "API server started", extra={"host": AppConfig.api_host, "port": AppConfig.api_port}
+    "API server started",
+    extra={"host": AppConfig.api_host, "port": AppConfig.api_port},
 )

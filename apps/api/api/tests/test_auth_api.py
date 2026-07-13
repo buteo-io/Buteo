@@ -90,7 +90,8 @@ async def test_me_unauthenticated_is_401(client: httpx.AsyncClient):
 
 
 async def test_me_after_login_returns_account(
-    authed: httpx.AsyncClient, account: Account
+    authed: httpx.AsyncClient,
+    account: Account,
 ):
     r = await authed.get("/me")
     assert r.status_code == 200
@@ -109,7 +110,7 @@ async def test_me_returns_tenant_features(client: httpx.AsyncClient, account: Ac
     # 1. Update tenant features in central DB
     async with IdentitySessionLocal() as id_s:
         tenant = await id_s.scalar(
-            select(Tenant).where(Tenant.tenant_id == account.tenant_id)
+            select(Tenant).where(Tenant.tenant_id == account.tenant_id),
         )
         assert tenant is not None
         tenant.features = ["can_write", "plugin_weather", "additional_analytics"]
@@ -177,11 +178,7 @@ async def test_logout_clears_session_cookie(
     cleared = [c for c in set_cookies if c.startswith("tracker_session=")]
     assert cleared, f"no Set-Cookie for tracker_session in {set_cookies}"
     cookie = cleared[0].lower()
-    assert (
-        "max-age=0" in cookie
-        or 'tracker_session=""' in cookie
-        or "tracker_session=;" in cookie
-    )
+    assert "max-age=0" in cookie or 'tracker_session=""' in cookie or "tracker_session=;" in cookie
 
 
 async def test_require_feature_dependency(
@@ -206,7 +203,8 @@ async def test_require_feature_dependency(
 
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
+        transport=transport,
+        base_url="http://test",
     ) as unauth_client:
         r_unauth = await unauth_client.get("/test-additional-route")
         assert r_unauth.status_code == 401, r_unauth.text
@@ -219,7 +217,7 @@ async def test_require_feature_dependency(
     # 3. Simulate granting feature and bumping token_version
     async with IdentitySessionLocal() as id_s:
         tenant = await id_s.scalar(
-            select(Tenant).where(Tenant.tenant_id == account.tenant_id)
+            select(Tenant).where(Tenant.tenant_id == account.tenant_id),
         )
         assert tenant is not None
         tenant.features = ["additional_analytics"]
@@ -245,7 +243,7 @@ async def test_require_feature_dependency(
     # 5. Deactivate tenant -> 401
     async with IdentitySessionLocal() as id_s:
         tenant = await id_s.scalar(
-            select(Tenant).where(Tenant.tenant_id == account.tenant_id)
+            select(Tenant).where(Tenant.tenant_id == account.tenant_id),
         )
         assert tenant is not None
         tenant.is_active = False

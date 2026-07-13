@@ -1,13 +1,11 @@
 // Top-level orchestrator. Owns global app state and wires children together.
 // All UI lives in components/ and panels/.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   api,
-  Device,
   Place,
-  CategoryEntry,
   Position,
   ShareLink,
   Trip,
@@ -45,29 +43,14 @@ import { PlacesPanel } from "./panels/PlacesPanel";
 import { SettingsPanel } from "./panels/SettingsPanel";
 import { SharePanel } from "./panels/SharePanel";
 import { TripsPanel } from "./panels/TripsPanel";
-import {
-  defaultRange,
-  getRangePresets,
-  Range,
-  toIsoZ,
-  toLocalInput,
-} from "./utils/time";
-
-type Mode = "live" | "history";
+import { getRangePresets, toLocalInput } from "./utils/time";
 
 export default function App() {
   useTheme(); // Initialize global theme
   const { t } = useTranslation();
   const { me, logout } = useAuth();
   const { range, setRange, fromIso, toIso } = useDateRange();
-  const {
-    entities,
-    devices,
-    device,
-    setDevice,
-    activeEntity,
-    refreshEntities,
-  } = useEntity();
+  const { devices, device, setDevice } = useEntity();
   const {
     mapContainerRef,
     map,
@@ -75,10 +58,6 @@ export default function App() {
     setMode,
     colorMode,
     setColorMode,
-    hiddenCategories,
-    setHiddenCategories,
-    hideUncategorized,
-    setHideUncategorized,
     pinned,
     setPinned,
     pinnedXY,
@@ -172,8 +151,8 @@ export default function App() {
       const next: Record<string, TripStats> = {};
       for (const r of stats) if (r) next[r[0]] = r[1];
       setTripStats(next);
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
     }
   }, []);
 
@@ -218,8 +197,8 @@ export default function App() {
       if (mode === "history" && pts.length && map.current) {
         map.current.fitTo(pts.map((p) => [p.lon, p.lat] as [number, number]));
       }
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
@@ -290,8 +269,8 @@ export default function App() {
       setPinned(pos);
       setPinnedXY(pos ? m.project(pos.lon, pos.lat) : null);
     });
-    return () => map.current?.onHistoryClick(null);
-  }, [map, historyPts]);
+    return () => m.onHistoryClick(null);
+  }, [map, historyPts, setPinned, setPinnedXY]);
 
   useEffect(() => {
     const m = map.current;
@@ -316,14 +295,14 @@ export default function App() {
             showToast(t("toasts.placeDeleted", { name: place.name }));
             setDetailsModal(null);
             map.current?.setSelectedMarker(null, null);
-          } catch (e: any) {
-            setErr(e.message);
+          } catch (e: unknown) {
+            setErr(e instanceof Error ? e.message : String(e));
           }
         }
       }
     });
-    return () => map.current?.onPlaceAction(null);
-  }, [map, showToast, places]);
+    return () => m.onPlaceAction(null);
+  }, [map, showToast, places, t]);
 
   useEffect(() => {
     const m = map.current;
@@ -341,7 +320,7 @@ export default function App() {
         }
       }
     });
-    return () => map.current?.onOvernightAction(null);
+    return () => m.onOvernightAction(null);
   }, [map, userTrips]);
 
   useEffect(() => {
@@ -352,15 +331,15 @@ export default function App() {
       return;
     }
     m.onMapMove(() => setPinnedXY(m.project(pinned.lon, pinned.lat)));
-    return () => map.current?.onMapMove(null);
-  }, [pinned, map]);
+    return () => m.onMapMove(null);
+  }, [pinned, map, setPinnedXY]);
 
   useEffect(() => {
     if (mode !== "history") {
       setPinned(null);
       setPinnedXY(null);
     }
-  }, [mode]);
+  }, [mode, setPinned, setPinnedXY]);
 
   useEffect(() => {
     if (!map.current) return;
@@ -387,28 +366,6 @@ export default function App() {
     await loadHistory();
   };
 
-  const onDownloadTrip = async (trip: Trip, fmt: "gpx" | "csv") => {
-    try {
-      const from = new Date(trip.started_at).toISOString();
-      const to = new Date(trip.ended_at ?? new Date()).toISOString();
-      const blob = await api.download(trip.device_id, fmt, from, to);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${trip.name}.${fmt}`;
-      // Firefox needs the element in the document tree for `click()` to
-      // trigger a download (Chrome is more forgiving). Defer revoke until
-      // after the click event has had a chance to start the download —
-      // synchronous revoke can race and produce empty files.
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 100);
-    } catch (e: any) {
-      setErr(e.message);
-    }
-  };
-
   const onExportTripGpx = async (tripId: string, includeMetadata: boolean) => {
     try {
       const trip = userTrips.find((t) => t.id === tripId);
@@ -422,8 +379,8 @@ export default function App() {
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 100);
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -560,26 +517,8 @@ export default function App() {
                     pts.map((p) => [p.lon, p.lat] as [number, number]),
                   );
                 }
-              } catch (e: any) {
-                setErr(e.message);
-              }
-            }}
-            onDelete={async (id) => {
-              try {
-                await api.deleteTrip(id);
-                if (selectedTripId === id) {
-                  setSelectedTripId(null);
-                  setPlacesFilterByTrip(false);
-                  setHistoryPts([]);
-                  map.current?.setOvernightSpots([]);
-                  map.current?.clearHistory();
-                }
-                if (expandedTripId === id) {
-                  setExpandedTripId(null);
-                }
-                void refreshTrips();
-              } catch (e: any) {
-                setErr(e.message);
+              } catch (e: unknown) {
+                setErr(e instanceof Error ? e.message : String(e));
               }
             }}
             onEnd={async (tTrip) => {
@@ -614,12 +553,12 @@ export default function App() {
                       from: toLocalInput(new Date(tTrip.started_at)),
                       to: toLocalInput(new Date()),
                     });
-                  } catch (e: any) {
-                    setErr(e.message);
+                  } catch (e: unknown) {
+                    setErr(e instanceof Error ? e.message : String(e));
                   }
                 }
-              } catch (e: any) {
-                setErr(e.message);
+              } catch (e: unknown) {
+                setErr(e instanceof Error ? e.message : String(e));
               }
             }}
             onEdit={async (t) => {
@@ -628,9 +567,10 @@ export default function App() {
               try {
                 const spots = await api.tripOvernightSpots(t.id);
                 setTripModalOvernightSpots(spots);
-              } catch (_) {}
+              } catch {
+                /* fetch errors ignored; modal still opens without overnight spots */
+              }
             }}
-            onDownload={onDownloadTrip}
             onShare={(trip, shareLinkId) => {
               if (shareLinkId) {
                 setPrefilledShareLinkId(shareLinkId);
@@ -646,7 +586,7 @@ export default function App() {
                 await navigator.clipboard.writeText(url);
                 showToast(t("share.linkCopied"));
                 void refreshShareLinks();
-              } catch (e: any) {
+              } catch {
                 showToast(t("share.copyFailed"));
               }
             }}
@@ -953,8 +893,8 @@ export default function App() {
             );
             setDetailsModal(null);
             map.current?.setSelectedMarker(null, null);
-          } catch (e: any) {
-            setErr(e.message);
+          } catch (e: unknown) {
+            setErr(e instanceof Error ? e.message : String(e));
           }
         }}
         onMediaClick={(media, i) => {
@@ -1048,8 +988,8 @@ export default function App() {
               setExpandedTripId(null);
             }
             void refreshTrips();
-          } catch (e: any) {
-            setErr(e.message);
+          } catch (e: unknown) {
+            setErr(e instanceof Error ? e.message : String(e));
           }
         }}
         onSubmit={async (body, id) => {
@@ -1093,8 +1033,8 @@ export default function App() {
                     body.ended_at ? new Date(body.ended_at) : new Date(),
                   ),
                 });
-              } catch (e: any) {
-                setErr(e.message);
+              } catch (e: unknown) {
+                setErr(e instanceof Error ? e.message : String(e));
               }
             }
             showToast(t("toasts.tripUpdated"));

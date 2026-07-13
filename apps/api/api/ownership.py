@@ -35,15 +35,15 @@ def _not_found(kind: str) -> HTTPException:
 
 
 async def own_device(
-    db: AsyncSession, user: User, device_pid: PrefixUUID | str
+    db: AsyncSession,
+    user: User,
+    device_pid: PrefixUUID | str,
 ) -> Device:
     pid = _as_prefixed_id(device_pid, "dev")
     if pid is None:
         raise _not_found("device")
     d = await db.scalar(
-        select(Device)
-        .join(Device.entity)
-        .where(Device.public_id == pid, Entity.user_id == user.id)
+        select(Device).join(Device.entity).where(Device.public_id == pid, Entity.user_id == user.id),
     )
     if not d or d.revoked_at is not None:
         raise _not_found("device")
@@ -61,7 +61,9 @@ async def own_place(db: AsyncSession, user: User, place_pid: PrefixUUID | str) -
 
 
 async def own_trip(
-    db: AsyncSession, user: User, trip_pid: PrefixUUID | str
+    db: AsyncSession,
+    user: User,
+    trip_pid: PrefixUUID | str,
 ) -> tuple[Trip, Device]:
     pid = _as_prefixed_id(trip_pid, "trp")
     if pid is None:
@@ -71,7 +73,7 @@ async def own_trip(
         select(Trip, Device)
         .join(Device, Device.id == Trip.device_id)
         .join(Entity, Entity.id == Device.entity_id)
-        .where(Trip.public_id == pid, Entity.user_id == user.id)
+        .where(Trip.public_id == pid, Entity.user_id == user.id),
     )
     row = result.first()
     if not row:

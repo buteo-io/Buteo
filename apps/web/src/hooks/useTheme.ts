@@ -18,10 +18,13 @@ export function useTheme() {
       }
 
       root.setAttribute("data-theme", activeMode);
-      
+
       const metaThemeColor = document.querySelector('meta[name="theme-color"]');
       if (metaThemeColor) {
-        metaThemeColor.setAttribute("content", activeMode === "dark" ? "#162029" : "#F3F1EB");
+        metaThemeColor.setAttribute(
+          "content",
+          activeMode === "dark" ? "#162029" : "#F3F1EB",
+        );
       }
     };
 

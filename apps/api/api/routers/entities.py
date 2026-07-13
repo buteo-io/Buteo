@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -28,20 +29,18 @@ class EntityOut(UTCModel):
     name: str
     avatar_icon: str | None = None
     metadata: dict | None = None
-    devices: list[DeviceOut] = []
+    devices: list[DeviceOut] = Field(default_factory=list)
 
 
 @router.get("/entities", response_model=list[EntityOut])
 async def list_entities(
-    user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
 ) -> list[EntityOut]:
     """List all entities owned by the caller, including their devices."""
     rows = (
         await db.scalars(
-            select(Entity)
-            .options(selectinload(Entity.devices))
-            .where(Entity.user_id == user.id)
-            .order_by(Entity.id),
+            select(Entity).options(selectinload(Entity.devices)).where(Entity.user_id == user.id).order_by(Entity.id),
         )
     ).all()
     logger.debug("list_entities user_id=%s count=%d", user.id, len(rows))
@@ -78,7 +77,7 @@ async def get_entity(
     ent = await db.scalar(
         select(Entity)
         .options(selectinload(Entity.devices))
-        .where(Entity.public_id == entity_pid, Entity.user_id == user.id)
+        .where(Entity.public_id == entity_pid, Entity.user_id == user.id),
     )
     if not ent:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Entity not found")

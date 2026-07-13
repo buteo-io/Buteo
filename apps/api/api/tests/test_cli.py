@@ -199,7 +199,7 @@ def test_delete_tenant_command() -> None:
     async def verify_deleted():
         async with IdentitySessionLocal() as id_s:
             tenant = await id_s.scalar(
-                select(Tenant).where(Tenant.tenant_id == tenant_id)
+                select(Tenant).where(Tenant.tenant_id == tenant_id),
             )
             assert tenant is None
 

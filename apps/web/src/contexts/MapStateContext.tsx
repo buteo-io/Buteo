@@ -16,7 +16,9 @@ type MapStateContextType = {
   pinned: Position | null;
   setPinned: React.Dispatch<React.SetStateAction<Position | null>>;
   pinnedXY: { x: number; y: number } | null;
-  setPinnedXY: React.Dispatch<React.SetStateAction<{ x: number; y: number } | null>>;
+  setPinnedXY: React.Dispatch<
+    React.SetStateAction<{ x: number; y: number } | null>
+  >;
   detailsPos: Position | null;
   setDetailsPos: React.Dispatch<React.SetStateAction<Position | null>>;
 };
@@ -29,10 +31,14 @@ export function MapStateProvider({ children }: { children: React.ReactNode }) {
 
   const [mode, setMode] = useState<"live" | "history">("live");
   const [colorMode, setColorMode] = useState<ColorMode>("none");
-  const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(new Set());
+  const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(
+    new Set(),
+  );
   const [hideUncategorized, setHideUncategorized] = useState(false);
   const [pinned, setPinned] = useState<Position | null>(null);
-  const [pinnedXY, setPinnedXY] = useState<{ x: number; y: number } | null>(null);
+  const [pinnedXY, setPinnedXY] = useState<{ x: number; y: number } | null>(
+    null,
+  );
   const [detailsPos, setDetailsPos] = useState<Position | null>(null);
 
   return (
@@ -61,6 +67,7 @@ export function MapStateProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useMapState() {
   const context = useContext(MapStateContext);
   if (!context) {

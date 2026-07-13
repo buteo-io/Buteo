@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import logging
-import re
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -94,7 +93,8 @@ def _out(t: Trip, device_pid: PrefixUUID) -> TripOut:
 def _check_window(started_at: datetime, ended_at: datetime | None) -> None:
     if ended_at is not None and ended_at <= started_at:
         raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, "ended_at must be after started_at"
+            status.HTTP_400_BAD_REQUEST,
+            "ended_at must be after started_at",
         )
 
 
@@ -102,7 +102,7 @@ def _effective_end(t: Trip) -> datetime:
     """Upper bound for stats / positions queries. NOW for ongoing trips."""
     if t.ended_at is not None:
         return t.ended_at
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     return now if t.started_at.tzinfo is not None else now.replace(tzinfo=None)
 
 
@@ -113,7 +113,7 @@ async def _commit_or_409_ongoing(db: AsyncSession) -> None:
     except IntegrityError as e:
         await db.rollback()
         if "ux_trips_one_ongoing_per_device" in str(
-            e.orig
+            e.orig,
         ) or "UNIQUE constraint failed: trips.device_id" in str(e.orig):
             raise HTTPException(
                 status.HTTP_409_CONFLICT,
@@ -166,7 +166,10 @@ async def create_trip(
     await _commit_or_409_ongoing(db)
     await db.refresh(t)
     logger.info(
-        "trip_create user_id=%s trip_id=%s name=%r", user.id, t.public_id, body.name
+        "trip_create user_id=%s trip_id=%s name=%r",
+        user.id,
+        t.public_id,
+        body.name,
     )
     return _out(t, d.public_id)
 
@@ -242,11 +245,11 @@ async def end_trip(
     t, d = await own_trip(db, user, trip_id)
     if t.ended_at is not None:
         return _out(t, d.public_id)
-    end = (body.ended_at if body else None) or datetime.now(tz=timezone.utc)
+    end = (body.ended_at if body else None) or datetime.now(tz=UTC)
     if t.started_at.tzinfo is None and end.tzinfo is not None:
         end = end.replace(tzinfo=None)
     elif t.started_at.tzinfo is not None and end.tzinfo is None:
-        end = end.replace(tzinfo=timezone.utc)
+        end = end.replace(tzinfo=UTC)
     if end <= t.started_at:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
@@ -269,7 +272,7 @@ async def delete_trip(
     """Delete a trip. 204 on success, 404 if not owned."""
     t, _ = await own_trip(db, user, trip_id)
     spots_stmt = await db.execute(
-        select(OvernightSpot).where(OvernightSpot.trip_id == t.id)
+        select(OvernightSpot).where(OvernightSpot.trip_id == t.id),
     )
     spots = spots_stmt.scalars().all()
     data_dir = AppConfig.data_dir or "/data"
@@ -323,7 +326,10 @@ async def trip_stats(
             moving_s += int(dt)
     duration = int((end - t.started_at).total_seconds())
     logger.debug(
-        "trip_stats user_id=%s trip_id=%s points=%d", user.id, trip_id, len(pts)
+        "trip_stats user_id=%s trip_id=%s points=%d",
+        user.id,
+        trip_id,
+        len(pts),
     )
     return TripStats(
         distance_km=distance,
@@ -352,7 +358,10 @@ async def trip_positions(
     end = _effective_end(t)
     rows = await positions_in_window_capped(db, t.device_id, t.started_at, end)
     logger.debug(
-        "trip_positions user_id=%s trip_id=%s count=%d", user.id, trip_id, len(rows)
+        "trip_positions user_id=%s trip_id=%s count=%d",
+        user.id,
+        trip_id,
+        len(rows),
     )
     return [PositionOut.model_validate(p) for p in rows]
 
@@ -381,7 +390,10 @@ async def trip_places(
         )
     ).all()
     logger.debug(
-        "trip_places user_id=%s trip_id=%s count=%d", user.id, trip_id, len(rows)
+        "trip_places user_id=%s trip_id=%s count=%d",
+        user.id,
+        trip_id,
+        len(rows),
     )
     return [_place_out(p) for p in rows]
 

@@ -28,19 +28,29 @@ export const MAX_ANALYTICS_POINTS = 200_000;
 //   - HTTPException:  {"detail": "string"}
 //   - Pydantic 422:   {"detail": [{loc, msg, type, ...}, ...]}
 // Either way, we want a single human-readable line, not raw JSON.
-async function readError(r: Response): Promise<string> {
+type FastApiValidationError = {
+  loc?: (string | number)[];
+  msg?: string;
+  type?: string;
+};
+
+type FastApiError = {
+  detail?: string | FastApiValidationError[];
+};
+
+export async function readError(r: Response): Promise<string> {
   const text = await r.text();
   if (!text) return r.statusText || `HTTP ${r.status}`;
   try {
-    const j = JSON.parse(text);
-    const d = j?.detail;
+    const j = JSON.parse(text) as FastApiError;
+    const d = j.detail;
     if (typeof d === "string") return d;
     if (Array.isArray(d) && d.length > 0) {
       // Drop the "body."/"query." prefix from loc; keep just the field name.
       // Also strip Pydantic's "Value error, " prefix that wraps custom messages.
       return d
-        .map((e: any) => {
-          const field = Array.isArray(e?.loc) ? e.loc.slice(1).join(".") : "";
+        .map((e: FastApiValidationError) => {
+          const field = Array.isArray(e.loc) ? e.loc.slice(1).join(".") : "";
           const msg = String(e.msg || "").replace(/^Value error,\s*/i, "");
           return field ? `${field}: ${msg}` : msg;
         })
@@ -64,7 +74,7 @@ export type Entity = {
   type: string;
   name: string;
   avatar_icon?: string | null;
-  metadata?: Record<string, any> | null;
+  metadata?: Record<string, unknown> | null;
   devices: Device[];
 };
 export type Position = {

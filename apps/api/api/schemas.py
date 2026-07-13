@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -20,7 +20,7 @@ class UTCModel(BaseModel):
         for field in self.__class__.model_fields:
             v = getattr(self, field)
             if isinstance(v, datetime) and v.tzinfo is None:
-                setattr(self, field, v.replace(tzinfo=timezone.utc))
+                setattr(self, field, v.replace(tzinfo=UTC))
         return self
 
 

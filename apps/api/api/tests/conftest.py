@@ -17,6 +17,8 @@ from sqlalchemy import delete
 os.environ.setdefault("JWT_SECRET", "test-secret-" + "x" * 40)
 os.environ.setdefault("DEV_INSECURE_COOKIES", "true")
 
+import contextlib
+
 from api.main import create_app as _create_api_app
 from api.routers import auth as _auth_module
 from ingest.osmand import api as _osmand_module
@@ -68,10 +70,8 @@ async def _provision(email: str, password: str = "pw1234abcd!!") -> Account:
     if AppConfig.database_type.strip().lower() == "sqlite" and AppConfig.data_dir:
         db_file = Path(AppConfig.data_dir) / f"tnt{tenant_id}.db"
         if db_file.exists():
-            try:
+            with contextlib.suppress(OSError):
                 db_file.unlink()
-            except OSError:
-                pass
 
     # 1. Register Tenant in Identity DB
     async with IdentitySessionLocal() as id_s:
@@ -146,10 +146,8 @@ async def _purge(tenant_id: str) -> None:
     if AppConfig.database_type.strip().lower() == "sqlite" and AppConfig.data_dir:
         db_file = Path(AppConfig.data_dir) / f"tnt{tenant_id}.db"
         if db_file.exists():
-            try:
+            with contextlib.suppress(OSError):
                 db_file.unlink()
-            except OSError:
-                pass
 
 
 @pytest.fixture
@@ -219,7 +217,8 @@ async def client() -> AsyncIterator[httpx.AsyncClient]:
 
 @pytest.fixture
 async def authed(
-    client: httpx.AsyncClient, account: Account
+    client: httpx.AsyncClient,
+    account: Account,
 ) -> AsyncIterator[httpx.AsyncClient]:
     """Client logged in as :func:`account` via the cookie path."""
     await _do_login(client, account.email, account.password)
@@ -244,7 +243,7 @@ async def _set_read_only(tenant_id: str) -> None:
         await id_s.execute(
             update(Tenant)
             .where(Tenant.tenant_id == tenant_id)
-            .values(features=[], token_version=Tenant.token_version + 1)
+            .values(features=[], token_version=Tenant.token_version + 1),
         )
         await id_s.commit()
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,7 +37,7 @@ async def detect_and_persist_overnights(
     updating counts, creating new spots, and deleting spots that are no longer
     within the trip window. Cooldown applies only to ongoing trips.
     """
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     scan_end = trip.ended_at if trip.ended_at is not None else now
 
     latest_trip_position_time = await db.scalar(

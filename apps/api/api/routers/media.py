@@ -39,12 +39,12 @@ async def _own_media(
 
     # Check OvernightSpotMedia
     m = await db.scalar(
-        select(OvernightSpotMedia).where(OvernightSpotMedia.public_id == media_id)
+        select(OvernightSpotMedia).where(OvernightSpotMedia.public_id == media_id),
     )
     if not m or m.user_id != user.id:
         raise HTTPException(404, "media not found")
     s = await db.scalar(
-        select(OvernightSpot).where(OvernightSpot.id == m.overnight_spot_id)
+        select(OvernightSpot).where(OvernightSpot.id == m.overnight_spot_id),
     )
     if not s:
         raise HTTPException(404, "overnight spot not found")
@@ -58,7 +58,7 @@ async def serve_media(
     db: AsyncSession = Depends(get_db),
 ):
     """Serve a media file (image/video)."""
-    m, entity, entity_type = await _own_media(db, user, media_id)
+    m, entity, _entity_type = await _own_media(db, user, media_id)
 
     data_dir = AppConfig.data_dir or "/data"
     media_dir = Path(data_dir) / "uploads" / str(entity.user_id) / str(entity.public_id)
