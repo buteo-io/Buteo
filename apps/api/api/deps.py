@@ -28,8 +28,9 @@ def get_current_tenant_id(request: Request) -> str:
     """Resolve current tenant_id from request path parameter or JWT claims."""
     token_param = request.path_params.get("token")
     if token_param and "_" in token_param:
-        if len(token_param) > 44 and token_param[-44] == "_":
-            return token_param[:-44]
+        # Share tokens are built as "{tenant_id}_{random_secret}". tenant_id is
+        # tnt<uuid> and contains no underscores, so the first underscore is the
+        # unambiguous delimiter. This is independent of the secret length.
         return token_param.split("_", 1)[0]
 
     # 2. Try extracting tenant_id from JWT cookie/header

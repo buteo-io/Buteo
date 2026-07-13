@@ -525,3 +525,48 @@ async def test_public_share_password_protection(
     media_res = await client.get(f"/share/{share_token}/media/{media_id}")
     assert media_res.status_code == 200
     assert media_res.content == png_content
+
+
+@pytest.mark.asyncio
+async def test_share_link_round_trips_tenant_extraction(
+    authed: httpx.AsyncClient,
+    client: httpx.AsyncClient,
+    account: Account,
+):
+    """Creating a share link and then fetching the public share by token must
+    route to the correct tenant database. This guards against tenant-id extraction
+    that relies on the secret length instead of the delimiter.
+    """
+    start = datetime.now(timezone.utc) - timedelta(days=5)
+    trip_res = await authed.post(
+        "/trips",
+        json={
+            "device_id": str(account.device_pid),
+            "name": "Round Trip Share",
+            "started_at": start.isoformat(),
+            "ended_at": None,
+        },
+    )
+    assert trip_res.status_code == 200, trip_res.text
+    trip_id = trip_res.json()["id"]
+
+    share_res = await authed.post(
+        "/share-links",
+        json={
+            "trip_id": trip_id,
+            "name": "Round Trip Link",
+            "delay_hours": 0,
+        },
+    )
+    assert share_res.status_code == 201, share_res.text
+    share_link = share_res.json()
+    share_token = share_link["token"]
+
+    # Token must be tenant_id + "_" + secret; tenant_id has no underscores.
+    assert share_token.startswith(account.tenant_id + "_"), (
+        "share token format changed"
+    )
+
+    public_res = await client.get(f"/share/{share_token}")
+    assert public_res.status_code == 200, public_res.text
+    assert public_res.json()["trip_name"] == "Round Trip Share"
