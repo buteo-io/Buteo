@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 import pytest
@@ -19,7 +19,7 @@ async def _positions(device_id: int) -> list[Position]:
             await s.scalars(
                 select(Position)
                 .where(Position.device_id == device_id, Position.is_filtered.is_(False))
-                .order_by(Position.time_id)
+                .order_by(Position.time_id),
             )
         ).all()
         # Detach so the caller can read attrs after the session closes.
@@ -35,7 +35,8 @@ async def _wipe_positions(device_id: int) -> None:
 
 
 async def test_osmand_get_persists_fix(
-    osmand_client: httpx.AsyncClient, account: Account
+    osmand_client: httpx.AsyncClient,
+    account: Account,
 ):
     await _wipe_positions(account.device_id)
     r = await osmand_client.get(
@@ -58,16 +59,13 @@ async def test_osmand_get_persists_fix(
     assert p.lon == pytest.approx(13.4)
     assert p.speed == pytest.approx(10 * 1.852)  # knots → km/h
     assert p.altitude == pytest.approx(42)
-    p_time = (
-        p.time_id.replace(tzinfo=timezone.utc)
-        if p.time_id.tzinfo is None
-        else p.time_id
-    )
-    assert p_time == datetime.fromtimestamp(1700000000, tz=timezone.utc)
+    p_time = p.time_id.replace(tzinfo=UTC) if p.time_id.tzinfo is None else p.time_id
+    assert p_time == datetime.fromtimestamp(1700000000, tz=UTC)
 
 
 async def test_owntracks_location_persists_fix(
-    osmand_client: httpx.AsyncClient, account: Account
+    osmand_client: httpx.AsyncClient,
+    account: Account,
 ):
     await _wipe_positions(account.device_id)
     r = await osmand_client.post(
@@ -84,7 +82,8 @@ async def test_owntracks_location_persists_fix(
 
 
 async def test_osmand_post_form_body(
-    osmand_client: httpx.AsyncClient, account: Account
+    osmand_client: httpx.AsyncClient,
+    account: Account,
 ):
     await _wipe_positions(account.device_id)
     r = await osmand_client.post(
@@ -98,9 +97,10 @@ async def test_osmand_post_form_body(
 
 
 async def test_osmand_post_query_params(
-    osmand_client: httpx.AsyncClient, account: Account
+    osmand_client: httpx.AsyncClient,
+    account: Account,
 ):
-    """iOS Traccar Client style: POST with everything in the URL."""
+    """IOS Traccar Client style: POST with everything in the URL."""
     await _wipe_positions(account.device_id)
     r = await osmand_client.post(
         f"/traccar_client?id={account.device_imei}&lat=1.5&lon=2.5",
@@ -123,29 +123,25 @@ async def test_osmand_iso_timestamp(osmand_client: httpx.AsyncClient, account: A
     )
     assert r.status_code == 200
     rows = await _positions(account.device_id)
-    p_time = (
-        rows[0].time_id.replace(tzinfo=timezone.utc)
-        if rows[0].time_id.tzinfo is None
-        else rows[0].time_id
-    )
-    assert p_time == datetime(2024, 5, 1, 12, 0, 0, tzinfo=timezone.utc)
+    p_time = rows[0].time_id.replace(tzinfo=UTC) if rows[0].time_id.tzinfo is None else rows[0].time_id
+    assert p_time == datetime(2024, 5, 1, 12, 0, 0, tzinfo=UTC)
 
 
 async def test_osmand_unknown_device(osmand_client: httpx.AsyncClient):
     r = await osmand_client.get(
-        "/traccar_client", params={"id": "999999999999999", "lat": "0", "lon": "0"}
+        "/traccar_client",
+        params={"id": "999999999999999", "lat": "0", "lon": "0"},
     )
     assert r.status_code == 401
 
 
 async def test_osmand_revoked_device(
-    osmand_client: httpx.AsyncClient, account: Account
+    osmand_client: httpx.AsyncClient,
+    account: Account,
 ):
     async with SessionLocal() as s:
         await s.execute(
-            update(Device)
-            .where(Device.id == account.device_id)
-            .values(revoked_at=datetime.now(tz=timezone.utc)),
+            update(Device).where(Device.id == account.device_id).values(revoked_at=datetime.now(tz=UTC)),
         )
         await s.commit()
     r = await osmand_client.get(
@@ -161,7 +157,8 @@ async def test_osmand_missing_id(osmand_client: httpx.AsyncClient):
 
 
 async def test_osmand_missing_coords(
-    osmand_client: httpx.AsyncClient, account: Account
+    osmand_client: httpx.AsyncClient,
+    account: Account,
 ):
     r = await osmand_client.get("/traccar_client", params={"id": account.device_imei})
     assert r.status_code == 400
@@ -209,7 +206,8 @@ async def test_osmand_out_of_range(osmand_client: httpx.AsyncClient, account: Ac
 
 
 async def test_osmand_updates_last_seen(
-    osmand_client: httpx.AsyncClient, account: Account
+    osmand_client: httpx.AsyncClient,
+    account: Account,
 ):
     await _wipe_positions(account.device_id)
     r = await osmand_client.get(
@@ -224,12 +222,8 @@ async def test_osmand_updates_last_seen(
     assert r.status_code == 200
     async with SessionLocal() as s:
         d = await s.get(Device, account.device_id)
-        d_last_seen = (
-            d.last_seen_at.replace(tzinfo=timezone.utc)
-            if d.last_seen_at.tzinfo is None
-            else d.last_seen_at
-        )
-        assert d_last_seen == datetime.fromtimestamp(1700000000, tz=timezone.utc)
+        d_last_seen = d.last_seen_at.replace(tzinfo=UTC) if d.last_seen_at.tzinfo is None else d.last_seen_at
+        assert d_last_seen == datetime.fromtimestamp(1700000000, tz=UTC)
 
 
 async def test_owntracks_ignores_non_location_payload(
@@ -259,7 +253,8 @@ async def test_owntracks_empty_payload_ignored(osmand_client: httpx.AsyncClient)
 
 
 async def test_spike_filter_removes_isolated_out_and_back(
-    osmand_client: httpx.AsyncClient, account: Account
+    osmand_client: httpx.AsyncClient,
+    account: Account,
 ):
     """A-B-C out-and-back within short gaps => B removed."""
     await _wipe_positions(account.device_id)
@@ -305,27 +300,19 @@ async def test_spike_filter_removes_isolated_out_and_back(
 
     rows = await _positions(account.device_id)
     # Should have A and C, but NOT B (spike filtered)
-    assert len(rows) == 2, (
-        f"Expected 2 positions (A,C), got {len(rows)}: {[r.time_id for r in rows]}"
-    )
-    times = {
-        r.time_id.replace(tzinfo=timezone.utc)
-        if r.time_id.tzinfo is None
-        else r.time_id
-        for r in rows
-    }
-    dt_a = datetime.fromtimestamp(ts_a, tz=timezone.utc)
-    dt_b = datetime.fromtimestamp(ts_b, tz=timezone.utc)
-    dt_c = datetime.fromtimestamp(ts_c, tz=timezone.utc)
+    assert len(rows) == 2, f"Expected 2 positions (A,C), got {len(rows)}: {[r.time_id for r in rows]}"
+    times = {r.time_id.replace(tzinfo=UTC) if r.time_id.tzinfo is None else r.time_id for r in rows}
+    dt_a = datetime.fromtimestamp(ts_a, tz=UTC)
+    dt_b = datetime.fromtimestamp(ts_b, tz=UTC)
+    dt_c = datetime.fromtimestamp(ts_c, tz=UTC)
     assert dt_a in times, f"A (ts={ts_a}) should be present, got times: {times}"
     assert dt_c in times, f"C (ts={ts_c}) should be present, got times: {times}"
-    assert dt_b not in times, (
-        f"B (ts={ts_b}) should be filtered out, got times: {times}"
-    )
+    assert dt_b not in times, f"B (ts={ts_b}) should be filtered out, got times: {times}"
 
 
 async def test_spike_filter_keeps_continuous_travel(
-    osmand_client: httpx.AsyncClient, account: Account
+    osmand_client: httpx.AsyncClient,
+    account: Account,
 ):
     """High-speed continuous travel (no return near start) => keep all."""
     await _wipe_positions(account.device_id)
@@ -375,7 +362,8 @@ async def test_spike_filter_keeps_continuous_travel(
 
 
 async def test_spike_filter_keeps_long_gap(
-    osmand_client: httpx.AsyncClient, account: Account
+    osmand_client: httpx.AsyncClient,
+    account: Account,
 ):
     """Return-near-start but long gap (>15 min) => keep all."""
     await _wipe_positions(account.device_id)
@@ -425,7 +413,8 @@ async def test_spike_filter_keeps_long_gap(
 
 
 async def test_spike_filter_cross_request_removes_persisted_spike(
-    osmand_client: httpx.AsyncClient, account: Account
+    osmand_client: httpx.AsyncClient,
+    account: Account,
 ):
     """Cross-request: A+B in request 1, C in request 2 => persisted B removed."""
     await _wipe_positions(account.device_id)
@@ -474,13 +463,12 @@ async def test_spike_filter_cross_request_removes_persisted_spike(
 
     rows = await _positions(account.device_id)
     # Should have A and C, but NOT B (persisted spike removed)
-    assert len(rows) == 2, (
-        f"Expected 2 positions after cross-request filter, got {len(rows)}"
-    )
+    assert len(rows) == 2, f"Expected 2 positions after cross-request filter, got {len(rows)}"
 
 
 async def test_spike_filter_ignores_out_of_order_timestamp(
-    osmand_client: httpx.AsyncClient, account: Account
+    osmand_client: httpx.AsyncClient,
+    account: Account,
 ):
     """Out-of-order C timestamp must not trigger persisted B deletion."""
     await _wipe_positions(account.device_id)

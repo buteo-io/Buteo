@@ -1,8 +1,16 @@
 import { useEffect, useRef } from "react";
-import maplibregl, { LngLatLike, Map as MLMap, Marker, Popup } from "maplibre-gl";
+import type { Feature, LineString, Point } from "geojson";
+import maplibregl, {
+  GeoJSONSource,
+  LngLatLike,
+  Map as MLMap,
+  Marker,
+  Popup,
+  StyleSpecification,
+} from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { api, OvernightSpot, Place, Position } from "../api";
-import { tPlaceCategory, tPopupLabel } from "../i18n";
+import { OvernightSpot, Place, Position } from "../api";
+import { tPopupLabel } from "../i18n";
 
 // NOTE: tiles come from openstreetmap.org. Two licensing constraints apply:
 //   1. OSM data is under ODbL -- attribution `© OpenStreetMap contributors`
@@ -27,7 +35,7 @@ const STYLE = {
     },
   },
   layers: [{ id: "osm", type: "raster", source: "osm" }],
-} as any;
+} as StyleSpecification;
 
 export type DevicePopupInfo = {
   name: string;
@@ -36,7 +44,12 @@ export type DevicePopupInfo = {
   position: Position;
 };
 
-export type Overnight = { lon: number; lat: number; started_at: string; duration_s: number };
+export type Overnight = {
+  lon: number;
+  lat: number;
+  started_at: string;
+  duration_s: number;
+};
 
 export type ColorMode = "none" | "speed" | "altitude" | "weekday";
 
@@ -53,12 +66,22 @@ export type MapHandle = {
   setColorMode: (mode: ColorMode) => void;
   setPlaces: (places: Place[], options?: PlaceMarkerOptions) => void;
   setOvernights: (stops: Overnight[]) => void;
-  setOvernightSpots: (spots: OvernightSpot[], options?: PlaceMarkerOptions) => void;
-  setGeofence: (lon: number | null, lat: number | null, radius_m: number | null) => void;
+  setOvernightSpots: (
+    spots: OvernightSpot[],
+    options?: PlaceMarkerOptions,
+  ) => void;
+  setGeofence: (
+    lon: number | null,
+    lat: number | null,
+    radius_m: number | null,
+  ) => void;
   flyTo: (lon: number, lat: number, zoom?: number) => void;
   fitTo: (coords: [number, number][]) => void;
   openDevicePopup: () => void;
-  setSelectedMarker: (type: "place" | "overnight-spot" | null, id: string | null) => void;
+  setSelectedMarker: (
+    type: "place" | "overnight-spot" | null,
+    id: string | null,
+  ) => void;
   // events
   onMapClick: (cb: ((lon: number, lat: number) => void) | null) => void;
   onHistoryClick: (cb: HistoryClickCb | null) => void;
@@ -71,8 +94,10 @@ export type MapHandle = {
 
 type Cb = ((lon: number, lat: number) => void) | null;
 type HistoryClickCb = (position: Position | null) => void;
-type PlaceActionCb = ((action: "edit" | "delete" | "view", place: Place | null) => void) | null;
-type OvernightActionCb = ((action: "edit" | "view", spot: OvernightSpot | null) => void) | null;
+type PlaceActionCb =
+  ((action: "edit" | "delete" | "view", place: Place | null) => void) | null;
+type OvernightActionCb =
+  ((action: "edit" | "view", spot: OvernightSpot | null) => void) | null;
 
 const NEUTRAL_TRACK_COLOR = "#1d4ed8";
 
@@ -113,7 +138,6 @@ function weekdayToColor(timeId: string): string {
 
 export function useTrackMap(
   container: React.RefObject<HTMLDivElement>,
-  mediaUrlFn?: (mediaId: string) => string,
 ): React.MutableRefObject<MapHandle | null> {
   const handleRef = useRef<MapHandle | null>(null);
   const mapRef = useRef<MLMap | null>(null);
@@ -129,9 +153,6 @@ export function useTrackMap(
   const moveCbRef = useRef<(() => void) | null>(null);
   const positionsRef = useRef<Position[]>([]);
   const colorModeRef = useRef<ColorMode>("none");
-  const mediaUrlFnRef = useRef(mediaUrlFn);
-  const selectedMarkerTypeRef = useRef<"place" | "overnight-spot" | null>(null);
-  const selectedMarkerIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!container.current) return;
@@ -146,7 +167,10 @@ export function useTrackMap(
       attributionControl: false,
     });
     map.addControl(new maplibregl.NavigationControl(), "bottom-right");
-    map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
+    map.addControl(
+      new maplibregl.ScaleControl({ unit: "metric" }),
+      "bottom-left",
+    );
     map.addControl(
       new maplibregl.AttributionControl({
         compact: true,
@@ -214,7 +238,11 @@ export function useTrackMap(
           id: "geofence-line",
           type: "line",
           source: "geofence",
-          paint: { "line-color": "#ef4444", "line-width": 2, "line-dasharray": [2, 2] },
+          paint: {
+            "line-color": "#ef4444",
+            "line-width": 2,
+            "line-dasharray": [2, 2],
+          },
         });
       }
     };
@@ -224,13 +252,21 @@ export function useTrackMap(
       loaded = true;
       while (pending.length) {
         const fn = pending.shift();
-        try { fn?.(); } catch (e) { console.error(e); }
+        try {
+          fn?.();
+        } catch (e) {
+          console.error(e);
+        }
       }
     });
 
     map.on("click", (e) => {
       const clickTarget = e.originalEvent.target;
-      if (clickTarget instanceof Element && (clickTarget.closest(".overnight-spot-marker") || clickTarget.closest(".place-marker"))) {
+      if (
+        clickTarget instanceof Element &&
+        (clickTarget.closest(".overnight-spot-marker") ||
+          clickTarget.closest(".place-marker"))
+      ) {
         return;
       }
 
@@ -254,10 +290,15 @@ export function useTrackMap(
         [e.point.x + 20, e.point.y + 20],
       ];
       // Only dots are clickable — exact index, no segment math
-      const dotHits = map.queryRenderedFeatures(hitBox, { layers: ["track-dots"] });
+      const dotHits = map.queryRenderedFeatures(hitBox, {
+        layers: ["track-dots"],
+      });
       if (dotHits.length > 0) {
         const idx = dotHits[0].properties?.idx;
-        if (idx != null && pts[idx]) { cb(pts[idx]); return; }
+        if (idx != null && pts[idx]) {
+          cb(pts[idx]);
+          return;
+        }
       }
       cb(null);
     });
@@ -279,7 +320,7 @@ export function useTrackMap(
       // In 'none' mode every segment shares the same neutral color so the
       // whole track collapses into a single feature -- ideal for perf and
       // for the simplifier.
-      const features: any[] = [];
+      const features: Feature<LineString, { color: string }>[] = [];
       const colorOf = (p: Position) => {
         switch (colorModeRef.current) {
           case "speed":
@@ -323,17 +364,19 @@ export function useTrackMap(
         }
         flush();
       }
-      const src = map.getSource("track") as any;
+      const src = map.getSource("track") as GeoJSONSource | undefined;
       if (src) src.setData({ type: "FeatureCollection", features });
 
       // Render position dots
-      const dotFeatures: any[] = positions.map((p, idx) => ({
-        type: "Feature",
-        geometry: { type: "Point", coordinates: [p.lon, p.lat] },
-        properties: { color: colorOf(p), idx },
-      }));
-      const dotSrc = map.getSource("track-dots") as any;
-      if (dotSrc) dotSrc.setData({ type: "FeatureCollection", features: dotFeatures });
+      const dotFeatures: Feature<Point, { color: string; idx: number }>[] =
+        positions.map((p, idx) => ({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [p.lon, p.lat] },
+          properties: { color: colorOf(p), idx },
+        }));
+      const dotSrc = map.getSource("track-dots") as GeoJSONSource | undefined;
+      if (dotSrc)
+        dotSrc.setData({ type: "FeatureCollection", features: dotFeatures });
     };
 
     // cursor hint when hovering a dot
@@ -395,7 +438,10 @@ export function useTrackMap(
         const el = document.createElement("div");
         el.className = `device-marker${isStale ? " stale" : ""}`;
         el.setAttribute("aria-label", info.name);
-        deviceMarkerRef.current = new maplibregl.Marker({ element: el, anchor: "center" })
+        deviceMarkerRef.current = new maplibregl.Marker({
+          element: el,
+          anchor: "center",
+        })
           .setLngLat(lngLat)
           .setPopup(devicePopupRef.current)
           .addTo(map);
@@ -417,117 +463,18 @@ export function useTrackMap(
       }
     };
 
-    const buildMediaHtml = (media: any[], getMediaUrl: (id: string) => string): string => {
-      if (media.length === 0) return "";
-      return `
-        <div class="popup-media">
-          ${media.slice(0, 4).map((m, i) =>
-            `<div class="popup-media-thumb${media.length > 4 && i === 3 ? ' more' : ''}" data-media-index="${i}">` +
-            (m.media_type === "image"
-              ? `<img src="${getMediaUrl(m.id)}" alt="" />`
-              : m.media_type === "video"
-                ? `<video src="${getMediaUrl(m.id)}"></video>`
-                : `<div class="popup-media-audio"><span>🎵</span></div>`) +
-            (media.length > 4 && i === 3 ? `<span>+${media.length - 4}</span>` : "") +
-            `</div>`
-          ).join("")}
-        </div>
-      `;
-    };
-
-    const setMediaClickHandlers = (root: HTMLElement, pl: Place | OvernightSpot, type: "place" | "overnight") => {
-      root.querySelectorAll(".popup-media-thumb").forEach((thumb) => {
-        thumb.addEventListener("click", (e) => {
-          e.stopPropagation();
-          if (type === "place") {
-            placeActionCbRef.current?.("view", pl as Place);
-          } else {
-            overnightActionCbRef.current?.("view", pl as OvernightSpot);
-          }
-        });
-      });
-    };
-
-    const buildPlacePopup = (pl: Place, readOnly = false): HTMLElement => {
-      const root = document.createElement("div");
-      root.className = "popup place-popup";
-      const placeCategoryHtml = pl.place_category
-        ? `<div class="popup-cat">${escapeHtml(tPlaceCategory(pl.place_category))}</div>`
-        : "";
-      const notesHtml = pl.notes
-        ? `<div class="popup-notes">${escapeHtml(pl.notes)}</div>`
-        : "";
-      const getMediaUrl = (id: string) => mediaUrlFnRef.current ? mediaUrlFnRef.current(id) : api.serveMedia(id);
-      const mediaHtml = buildMediaHtml(pl.media ?? [], getMediaUrl);
-      root.innerHTML = `
-        <div class="popup-title">${escapeHtml(pl.name)}</div>
-        ${placeCategoryHtml}
-        ${notesHtml}
-        ${mediaHtml}
-      `;
-      setMediaClickHandlers(root, pl, "place");
-      if (!readOnly) {
-        const actions = document.createElement("div");
-        actions.className = "popup-actions";
-        const editBtn = document.createElement("button");
-        editBtn.className = "primary small";
-        editBtn.textContent = "Edit";
-        editBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          placeActionCbRef.current?.("edit", pl);
-        });
-        const delBtn = document.createElement("button");
-        delBtn.className = "danger small";
-        delBtn.textContent = "Delete";
-        delBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          placeActionCbRef.current?.("delete", pl);
-        });
-        actions.appendChild(editBtn);
-        actions.appendChild(delBtn);
-        root.appendChild(actions);
-      }
-      return root;
-    };
-
-    const buildOvernightSpotPopup = (spot: OvernightSpot, readOnly = false): HTMLElement => {
-      const root = document.createElement("div");
-      root.className = "popup overnight-popup";
-      const notesHtml = spot.notes
-        ? `<div class="popup-notes">${escapeHtml(spot.notes)}</div>`
-        : "";
-      const getMediaUrl = (id: string) => mediaUrlFnRef.current ? mediaUrlFnRef.current(id) : api.serveMedia(id);
-      const mediaHtml = buildMediaHtml(spot.media ?? [], getMediaUrl);
-      root.innerHTML = `
-        <div class="popup-title">${escapeHtml(spot.name)}</div>
-        <div class="popup-cat">${spot.nights_count} night${spot.nights_count > 1 ? "s" : ""}</div>
-        ${notesHtml}
-        ${mediaHtml}
-      `;
-      setMediaClickHandlers(root, spot, "overnight");
-      if (!readOnly) {
-        const actions = document.createElement("div");
-        actions.className = "popup-actions";
-        const editBtn = document.createElement("button");
-        editBtn.className = "primary small";
-        editBtn.textContent = "Edit";
-        editBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          overnightActionCbRef.current?.("edit", spot);
-        });
-        actions.appendChild(editBtn);
-        root.appendChild(actions);
-      }
-      return root;
-    };
-
     const placeTypeClass = (type: string | undefined): string => {
       switch (type) {
-        case "POI": return "type-poi";
-        case "Drinking Water": return "type-drinking-water";
-        case "Camping": return "type-camping";
-        case "Parking": return "type-parking";
-        default: return "";
+        case "POI":
+          return "type-poi";
+        case "Drinking Water":
+          return "type-drinking-water";
+        case "Camping":
+          return "type-camping";
+        case "Parking":
+          return "type-parking";
+        default:
+          return "";
       }
     };
 
@@ -546,11 +493,14 @@ export function useTrackMap(
       }
     };
 
-    const setSelectedMarker = (type: "place" | "overnight-spot" | null, id: string | null) => {
+    const setSelectedMarker = (
+      _type: "place" | "overnight-spot" | null,
+      _id: string | null,
+    ) => {
       // No-op - we don't highlight selected markers on map anymore
     };
 
-    const setPlaces = (places: Place[], options: PlaceMarkerOptions = {}) => {
+    const setPlaces = (places: Place[], _options: PlaceMarkerOptions = {}) => {
       clearMarkers(placeMarkersRef.current);
       for (const pl of places) {
         const category = pl.place_category ?? undefined;
@@ -581,7 +531,10 @@ export function useTrackMap(
         const el = document.createElement("div");
         el.className = "overnight-marker";
         const hours = (s.duration_s / 3600).toFixed(1);
-        const popup = new maplibregl.Popup({ offset: 18, maxWidth: "400px" }).setHTML(
+        const popup = new maplibregl.Popup({
+          offset: 18,
+          maxWidth: "400px",
+        }).setHTML(
           `<div class="popup">
             <div class="popup-title">Overnight stay</div>
             <div class="popup-cat">${new Date(s.started_at).toLocaleString()}</div>
@@ -596,32 +549,35 @@ export function useTrackMap(
       }
     };
 
-    const setOvernightSpots = (spots: OvernightSpot[], options: PlaceMarkerOptions = {}) => {
+    const setOvernightSpots = (
+      spots: OvernightSpot[],
+      _options: PlaceMarkerOptions = {},
+    ) => {
       clearMarkers(overnightSpotMarkersRef.current);
       for (const spot of spots) {
         const el = document.createElement("div");
         el.className = "overnight-spot-marker";
         el.dataset.id = spot.id;
         el.dataset.type = "overnight-spot";
-        
+
         // Circle with moon icon
         const circle = document.createElement("div");
         circle.className = "marker-circle";
         circle.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
-        
+
         // Night count badge inside circle so outer el needs no position:relative
         const badge = document.createElement("div");
         badge.className = "overnight-badge";
         badge.textContent = String(spot.nights_count);
         circle.appendChild(badge);
-        
+
         el.appendChild(circle);
 
         el.addEventListener("click", (e) => {
           e.stopPropagation();
           overnightActionCbRef.current?.("view", spot);
         });
-        
+
         const m = new maplibregl.Marker({ element: el, anchor: "center" })
           .setLngLat([spot.lon, spot.lat])
           .addTo(map);
@@ -629,12 +585,20 @@ export function useTrackMap(
       }
     };
 
-    const setGeofence = (lon: number | null, lat: number | null, radius_m: number | null) => {
+    const setGeofence = (
+      lon: number | null,
+      lat: number | null,
+      radius_m: number | null,
+    ) => {
       whenReady(() => doSetGeofence(lon, lat, radius_m));
     };
-    const doSetGeofence = (lon: number | null, lat: number | null, radius_m: number | null) => {
+    const doSetGeofence = (
+      lon: number | null,
+      lat: number | null,
+      radius_m: number | null,
+    ) => {
       ensureLayers();
-      const src = map.getSource("geofence") as any;
+      const src = map.getSource("geofence") as GeoJSONSource | undefined;
       if (!src) return;
       if (lon == null || lat == null || !radius_m) {
         src.setData({ type: "FeatureCollection", features: [] });
@@ -649,7 +613,10 @@ export function useTrackMap(
         const brng = (i / steps) * 2 * Math.PI;
         const dLat = (radius_m * Math.cos(brng)) / R;
         const dLon = (radius_m * Math.sin(brng)) / (R * Math.cos(latRad));
-        points.push([lon + (dLon * 180) / Math.PI, lat + (dLat * 180) / Math.PI]);
+        points.push([
+          lon + (dLon * 180) / Math.PI,
+          lat + (dLat * 180) / Math.PI,
+        ]);
       }
       src.setData({
         type: "Feature",
@@ -663,7 +630,7 @@ export function useTrackMap(
       setHistory,
       clearHistory: () => {
         setHistory([]);
-        const dotSrc = map.getSource("track-dots") as any;
+        const dotSrc = map.getSource("track-dots") as GeoJSONSource | undefined;
         if (dotSrc) dotSrc.setData({ type: "FeatureCollection", features: [] });
       },
       setColorMode,
@@ -671,7 +638,8 @@ export function useTrackMap(
       setOvernights,
       setOvernightSpots,
       setGeofence,
-      flyTo: (lon, lat, zoom = 13) => map.flyTo({ center: [lon, lat], zoom, duration: 700 }),
+      flyTo: (lon, lat, zoom = 13) =>
+        map.flyTo({ center: [lon, lat], zoom, duration: 700 }),
       fitTo: (coords) => {
         if (coords.length === 0) return;
         const b = new maplibregl.LngLatBounds(coords[0], coords[0]);

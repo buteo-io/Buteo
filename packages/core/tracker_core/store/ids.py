@@ -14,8 +14,8 @@ def validate_prefix_uuid(v: str) -> str:
         raise ValueError(f"Invalid prefix '{prefix}'")
     try:
         uuid.UUID(v[3:])
-    except ValueError:
-        raise ValueError("Must be a valid UUID after prefix")
+    except ValueError as e:
+        raise ValueError("Must be a valid UUID after prefix") from e
     return v
 
 

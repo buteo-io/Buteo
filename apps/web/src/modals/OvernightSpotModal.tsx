@@ -7,24 +7,41 @@ export type OvernightSpotModalState = null | { spot: OvernightSpot };
 type Props = {
   state: OvernightSpotModalState;
   onClose: () => void;
-  onSubmit: (body: { name: string; notes: string | null }, id: string) => Promise<void> | void;
+  onSubmit: (
+    body: { name: string; notes: string | null },
+    id: string,
+  ) => Promise<void> | void;
   onMediaClick?: (media: OvernightSpotMedia[], initialIdx: number) => void;
   onMediaChange?: (spotId: string, media: OvernightSpotMedia[]) => void;
 };
 
-export function OvernightSpotModal({ state, onClose, onSubmit, onMediaClick, onMediaChange }: Props) {
+export function OvernightSpotModal({
+  state,
+  onClose,
+  onSubmit,
+  onMediaClick,
+  onMediaChange,
+}: Props) {
   const { t } = useTranslation();
   if (!state) return null;
 
   const handleEntitySubmit = async (data: { name: string; notes: string }) => {
     await onSubmit(
       { name: data.name, notes: data.notes || null },
-      state.spot.id
+      state.spot.id,
     );
   };
 
   const extraFields = (
-    <div className="popup-cat" style={{ marginTop: "-8px", marginBottom: "16px", fontSize: "12px", opacity: 0.7 }}>
+    <div
+      className="popup-cat"
+      style={{
+        marginTop: "-8px",
+        marginBottom: "16px",
+        fontSize: "12px",
+        opacity: 0.7,
+      }}
+    >
       {t("overnightSpot.nights", { count: state.spot.nights_count })}
     </div>
   );
@@ -51,4 +68,3 @@ export function OvernightSpotModal({ state, onClose, onSubmit, onMediaClick, onM
     />
   );
 }
-

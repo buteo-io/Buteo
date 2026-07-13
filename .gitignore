@@ -9,9 +9,11 @@ dist/
 .pytest_cache/
 *.egg-info/
 .DS_Store
+*.tsbuildinfo
 backups/
 *.db
 *.db-wal
 *.db-shm
 data/*
 .planning/*
+.vscode

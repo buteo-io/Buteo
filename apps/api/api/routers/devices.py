@@ -29,7 +29,8 @@ class DeviceOut(UTCModel):
 
 @router.get("/devices")
 async def list_devices(
-    user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
 ) -> list[DeviceOut]:
     """List all non-revoked devices owned by the caller, ordered by creation."""
     from sqlalchemy.orm import selectinload

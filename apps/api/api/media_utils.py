@@ -6,8 +6,14 @@ Deduplicated MIME type definitions and magic-byte validators.
 from __future__ import annotations
 
 import logging
+from pathlib import Path
+
+import anyio
+from fastapi import HTTPException, UploadFile
 
 logger = logging.getLogger(__name__)
+
+CHUNK_SIZE = 1024 * 1024  # 1 MiB
 
 ALLOWED_IMAGE_MIMES = {
     "image/jpeg",
@@ -66,3 +72,58 @@ def validate_magic_bytes(content: bytes, mime_type: str) -> bool:
         # ISOBMFF files (HEIC, HEIF, MP4, etc.) have 'ftyp' at offset 4.
         return len(content) > 8 and content[4:8] == b"ftyp"
     return content.startswith(magic)
+
+
+async def save_upload_file(
+    file: UploadFile,
+    dest: Path,
+    max_size: int,
+    mime_type: str,
+) -> int:
+    """Stream ``file`` to ``dest`` in chunks while enforcing size cap.
+
+    The first chunk is validated against ``mime_type`` magic bytes before
+    anything is written. Writes run on a thread pool so the event loop is not
+    blocked by large uploads.
+
+    Args:
+        file: Starlette/FastAPI upload handle.
+        dest: Target path on disk.
+        max_size: Maximum allowed file size in bytes.
+        mime_type: Declared MIME type of the upload.
+
+    Returns:
+        Total bytes written.
+
+    Raises:
+        HTTPException: 400 for empty file or magic-byte mismatch, 413 for oversize.
+    """
+    first_chunk = await file.read(CHUNK_SIZE)
+    if not first_chunk:
+        raise HTTPException(400, "empty file")
+    if not validate_magic_bytes(first_chunk, mime_type):
+        raise HTTPException(400, "file content does not match declared type")
+
+    bytes_written = len(first_chunk)
+    if bytes_written > max_size:
+        raise HTTPException(
+            413,
+            f"file too large (max {max_size // (1024 * 1024)}MB)",
+        )
+
+    with dest.open("wb") as f:
+        await anyio.to_thread.run_sync(f.write, first_chunk)
+
+        while True:
+            chunk = await file.read(CHUNK_SIZE)
+            if not chunk:
+                break
+            bytes_written += len(chunk)
+            if bytes_written > max_size:
+                raise HTTPException(
+                    413,
+                    f"file too large (max {max_size // (1024 * 1024)}MB)",
+                )
+            await anyio.to_thread.run_sync(f.write, chunk)
+
+    return bytes_written

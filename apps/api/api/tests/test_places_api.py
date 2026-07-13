@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC
 
 import httpx
 import pytest
@@ -66,9 +67,9 @@ async def test_place_validation_rejects_bad_coords(authed: httpx.AsyncClient):
 @pytest.mark.asyncio
 async def test_place_trip_links_round_trip(authed: httpx.AsyncClient, account):
     # Create two trips on the user's device.
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
-    start = datetime(2025, 6, 1, 8, tzinfo=timezone.utc)
+    start = datetime(2025, 6, 1, 8, tzinfo=UTC)
     end = start + timedelta(hours=1)
     base = {
         "device_id": str(account.device_pid),
@@ -117,9 +118,9 @@ async def test_place_rejects_other_users_trip(
     other_account,
 ):
     # other_authed creates a trip on their own device.
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
-    start = datetime(2025, 6, 1, 8, tzinfo=timezone.utc)
+    start = datetime(2025, 6, 1, 8, tzinfo=UTC)
     end = start + timedelta(hours=1)
     r = await other_authed.post(
         "/trips",
@@ -139,7 +140,8 @@ async def test_place_rejects_other_users_trip(
 
 @pytest.mark.asyncio
 async def test_place_404_on_other_user(
-    authed: httpx.AsyncClient, other_authed: httpx.AsyncClient
+    authed: httpx.AsyncClient,
+    other_authed: httpx.AsyncClient,
 ):
     r = await authed.post("/places", json=_payload())
     pid = r.json()["id"]
@@ -171,7 +173,9 @@ async def test_places_requires_auth(client: httpx.AsyncClient):
 
 @pytest.mark.asyncio
 async def test_place_delete_removes_uploaded_images(
-    authed: httpx.AsyncClient, tmp_path, monkeypatch
+    authed: httpx.AsyncClient,
+    tmp_path,
+    monkeypatch,
 ):
     from tracker_core.internal.appctx.config import AppConfig
 

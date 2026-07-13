@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from typing import Any
 
@@ -73,7 +73,7 @@ def make_token(
     Returns:
         The encoded JWT string.
     """
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     payload: dict[str, Any] = {
         "sub": str(public_id),
         "iss": AppConfig.jwt_issuer,

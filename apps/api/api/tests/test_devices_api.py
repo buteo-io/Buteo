@@ -1,4 +1,5 @@
 """Devices listing endpoint."""
+
 from __future__ import annotations
 
 import httpx
@@ -21,7 +22,8 @@ async def test_list_devices_returns_owned(authed: httpx.AsyncClient, account: Ac
 
 
 async def test_list_devices_isolated_per_user(
-    other_authed: httpx.AsyncClient, account: Account,
+    other_authed: httpx.AsyncClient,
+    account: Account,
 ):
     # Bob must not see Alice's device.
     r = await other_authed.get("/devices")

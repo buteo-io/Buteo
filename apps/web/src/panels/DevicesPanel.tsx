@@ -68,7 +68,8 @@ export function DevicesPanel(p: Props) {
                           fontWeight: "normal",
                         }}
                       >
-                        &gt;{t("devices.hoursAgo", { hours: Math.floor(hoursAgo) })}
+                        &gt;
+                        {t("devices.hoursAgo", { hours: Math.floor(hoursAgo) })}
                       </span>
                     ) : null;
                   })()}

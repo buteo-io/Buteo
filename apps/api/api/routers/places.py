@@ -36,7 +36,7 @@ from ..media_utils import (
     ALLOWED_IMAGE_MIMES,
     ALLOWED_MIMES,
     ALLOWED_VIDEO_MIMES,
-    validate_magic_bytes,
+    save_upload_file,
 )
 from ..schemas import UTCModel
 
@@ -142,12 +142,13 @@ def _apply_scalars(p: Place, body: PlaceIn) -> None:
 
 @router.get("/places", response_model=list[PlaceOut])
 async def list_places(
-    user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """Return every place owned by the caller, newest first."""
     rows = (
         await db.scalars(
-            select(Place).where(Place.user_id == user.id).order_by(Place.id.desc())
+            select(Place).where(Place.user_id == user.id).order_by(Place.id.desc()),
         )
     ).all()
     logger.debug("list_places user_id=%s count=%d", user.id, len(rows))
@@ -156,7 +157,7 @@ async def list_places(
     if place_ids:
         media_rows = (
             await db.scalars(
-                select(PlaceMedia).where(PlaceMedia.place_id.in_(place_ids))
+                select(PlaceMedia).where(PlaceMedia.place_id.in_(place_ids)),
             )
         ).all()
         for m in media_rows:
@@ -179,7 +180,10 @@ async def create_place(
     db.add(p)
     await db.commit()
     logger.info(
-        "place_create user_id=%s place_id=%s name=%r", user.id, p.public_id, body.name
+        "place_create user_id=%s place_id=%s name=%r",
+        user.id,
+        p.public_id,
+        body.name,
     )
     # Don't refresh: refresh expires `trips` and the selectin re-load would
     # need an awaitable IO call outside the greenlet. expire_on_commit=False
@@ -204,9 +208,7 @@ async def update_place(
     p.trips = trips
     await db.commit()
     logger.info("place_update user_id=%s place_id=%s", user.id, p.public_id)
-    media_rows = (
-        await db.scalars(select(PlaceMedia).where(PlaceMedia.place_id == p.id))
-    ).all()
+    media_rows = (await db.scalars(select(PlaceMedia).where(PlaceMedia.place_id == p.id))).all()
     return _out(p, list(media_rows))
 
 
@@ -273,13 +275,6 @@ async def upload_place_media(
     else:
         max_size = AppConfig.max_audio_size_mb * 1024 * 1024
 
-    content = await file.read()
-    if len(content) > max_size:
-        raise HTTPException(413, f"file too large (max {max_size // (1024 * 1024)}MB)")
-
-    if not validate_magic_bytes(content, file.content_type):
-        raise HTTPException(400, "file content does not match declared type")
-
     if file.content_type in ALLOWED_IMAGE_MIMES:
         media_type = "image"
     elif file.content_type in ALLOWED_VIDEO_MIMES:
@@ -307,7 +302,7 @@ async def upload_place_media(
     media_dir = _get_media_dir(p)
     media_dir.mkdir(parents=True, exist_ok=True)
     file_path = media_dir / stored_filename
-    file_path.write_bytes(content)
+    size_bytes = await save_upload_file(file, file_path, max_size, file.content_type)
 
     m = PlaceMedia(
         place_id=p.id,
@@ -316,7 +311,7 @@ async def upload_place_media(
         filename_stored=stored_filename,
         media_type=media_type,
         mime_type=file.content_type,
-        size_bytes=len(content),
+        size_bytes=size_bytes,
     )
     db.add(m)
     await db.commit()

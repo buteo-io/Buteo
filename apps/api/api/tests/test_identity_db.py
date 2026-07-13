@@ -74,10 +74,10 @@ async def test_identity_gps_device_cascade() -> None:
     async with IdentitySessionLocal() as session:
         # Clean existing test data
         await session.execute(
-            delete(GPSDevice).where(GPSDevice.imei == "123456789012345")
+            delete(GPSDevice).where(GPSDevice.imei == "123456789012345"),
         )
         await session.execute(
-            delete(Tenant).where(Tenant.tenant_id == "test-tenant-route")
+            delete(Tenant).where(Tenant.tenant_id == "test-tenant-route"),
         )
         await session.commit()
 
@@ -122,7 +122,7 @@ async def test_identity_tenant_unique_constraints() -> None:
     async with IdentitySessionLocal() as session:
         # Clean existing
         await session.execute(
-            delete(Tenant).where(Tenant.tenant_id.in_(["tenant-a", "tenant-b"]))
+            delete(Tenant).where(Tenant.tenant_id.in_(["tenant-a", "tenant-b"])),
         )
         await session.commit()
 

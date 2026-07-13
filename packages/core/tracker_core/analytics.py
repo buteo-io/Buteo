@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Generator, Iterable, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from math import asin, cos, radians, sin, sqrt
 
 from tracker_core.store.models import Position
@@ -193,7 +193,7 @@ def mileage_buckets(positions: Sequence[Position], granularity: str = "day") -> 
         if d / max((b.time_id - a.time_id).total_seconds() / 3600, 1e-9) > 250:
             continue
         # attribute to end-time bucket
-        ts_local = b.time_id.astimezone(timezone.utc)
+        ts_local = b.time_id.astimezone(UTC)
         key = ts_local.strftime(fmt)
         bucket[key] = bucket.get(key, 0.0) + d
     return sorted(bucket.items())
@@ -217,14 +217,16 @@ def trip_summary(positions: Sequence[Position]) -> dict:
     }
 
 
-def to_gpx(positions: Iterable[Position], name: str = "track", include_metadata: bool = True) -> Generator[str, None, None]:
+def to_gpx(
+    positions: Iterable[Position], name: str = "track", include_metadata: bool = True
+) -> Generator[str, None, None]:
     """Serialise positions to a GPX 1.1 ``<trk>`` document containing only location and time."""
     yield '<?xml version="1.0" encoding="UTF-8"?>\n'
     yield '<gpx version="1.1" creator="gps-tracker" xmlns="http://www.topografix.com/GPX/1/1">\n'
     yield f"<trk><name>{_xml_escape(name)}</name><trkseg>\n"
     for p in positions:
-        t = p.time_id if p.time_id.tzinfo is not None else p.time_id.replace(tzinfo=timezone.utc)
-        time_str = t.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        t = p.time_id if p.time_id.tzinfo is not None else p.time_id.replace(tzinfo=UTC)
+        time_str = t.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         yield f'<trkpt lat="{p.lat}" lon="{p.lon}"><time>{time_str}</time></trkpt>\n'
     yield "</trkseg></trk></gpx>\n"
 
@@ -233,17 +235,20 @@ def to_csv(positions: Iterable[Position]) -> Generator[str, None, None]:
     """Serialise positions to RFC 4180-ish CSV. Trailing newline included."""
     yield "time_id,lat,lon,altitude,speed_kmh,satellites\n"
     for p in positions:
-        t = p.time_id if p.time_id.tzinfo is not None else p.time_id.replace(tzinfo=timezone.utc)
-        yield ",".join(
-            [
-                t.astimezone(timezone.utc).isoformat(),
-                f"{p.lat}",
-                f"{p.lon}",
-                "" if p.altitude is None else f"{p.altitude}",
-                "" if p.speed is None else f"{p.speed}",
-                "" if p.satellites is None else f"{p.satellites}",
-            ],
-        ) + "\n"
+        t = p.time_id if p.time_id.tzinfo is not None else p.time_id.replace(tzinfo=UTC)
+        yield (
+            ",".join(
+                [
+                    t.astimezone(UTC).isoformat(),
+                    f"{p.lat}",
+                    f"{p.lon}",
+                    "" if p.altitude is None else f"{p.altitude}",
+                    "" if p.speed is None else f"{p.speed}",
+                    "" if p.satellites is None else f"{p.satellites}",
+                ],
+            )
+            + "\n"
+        )
 
 
 def _xml_escape(s: str) -> str:

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import uuid
 from collections.abc import AsyncIterator
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
@@ -25,7 +26,8 @@ from .conftest import Account, _unique_imei
 
 
 async def _provision_no_underscores(
-    email: str, password: str = "pw1234abcd!!"
+    email: str,
+    password: str = "pw1234abcd!!",
 ) -> Account:
     """Create a user + device pair with no underscores in tenant_id."""
     await init_identity_db()
@@ -38,10 +40,8 @@ async def _provision_no_underscores(
     if AppConfig.database_type.strip().lower() == "sqlite" and AppConfig.data_dir:
         db_file = Path(AppConfig.data_dir) / f"tnt{tenant_id}.db"
         if db_file.exists():
-            try:
+            with contextlib.suppress(OSError):
                 db_file.unlink()
-            except OSError:
-                pass
 
     async with IdentitySessionLocal() as id_s:
         await id_s.execute(delete(Tenant).where(Tenant.tenant_id == tenant_id))
@@ -107,10 +107,8 @@ async def _purge_custom(tenant_id: str) -> None:
     if AppConfig.database_type.strip().lower() == "sqlite" and AppConfig.data_dir:
         db_file = Path(AppConfig.data_dir) / f"tnt{tenant_id}.db"
         if db_file.exists():
-            try:
+            with contextlib.suppress(OSError):
                 db_file.unlink()
-            except OSError:
-                pass
 
 
 @pytest.fixture
@@ -134,9 +132,8 @@ async def test_public_share_media_privacy_bypass_fixed(
     account: Account,
 ):
     """Verify overnight spot media is hidden if last_stay_at is in privacy window."""
-
     # 1. Create a trip
-    start = datetime.now(timezone.utc) - timedelta(days=10)
+    start = datetime.now(UTC) - timedelta(days=10)
     trip_res = await authed.post(
         "/trips",
         json={
@@ -153,13 +150,13 @@ async def test_public_share_media_privacy_bypass_fixed(
 
     # 2. Add an overnight spot directly in the DB
     # CASE A: Spot within the delay window (recent)
-    recent_stay = datetime.now(timezone.utc) - timedelta(hours=10)
+    recent_stay = datetime.now(UTC) - timedelta(hours=10)
     async with SessionLocal() as s:
         from tracker_core.store.models import Trip as TripModel
 
         trip_db = (
             await s.execute(
-                select(TripModel).where(TripModel.public_id == trip_public_id)
+                select(TripModel).where(TripModel.public_id == trip_public_id),
             )
         ).scalar_one()
 
@@ -181,7 +178,8 @@ async def test_public_share_media_privacy_bypass_fixed(
     png_content = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
     files = {"file": ("recent.png", png_content, "image/png")}
     r_upload = await authed.post(
-        f"/overnight-spots/{spot_recent_public_id}/media", files=files
+        f"/overnight-spots/{spot_recent_public_id}/media",
+        files=files,
     )
     assert r_upload.status_code == 200, r_upload.text
     recent_media_id = r_upload.json()["id"]
@@ -209,18 +207,16 @@ async def test_public_share_media_privacy_bypass_fixed(
     # 6. Attempt to download recent spot media direct via /share/{token}/media/{media_id}
     # MUST fail with 404 because last_stay_at is inside the privacy delay window
     media_res_recent = await client.get(f"/share/{share_token}/media/{recent_media_id}")
-    assert media_res_recent.status_code == 404, (
-        "Recent spot media should be inaccessible"
-    )
+    assert media_res_recent.status_code == 404, "Recent spot media should be inaccessible"
 
     # 7. Add another spot outside the delay window (older)
-    old_stay = datetime.now(timezone.utc) - timedelta(hours=96)
+    old_stay = datetime.now(UTC) - timedelta(hours=96)
     async with SessionLocal() as s:
         from tracker_core.store.models import Trip as TripModel
 
         trip_db = (
             await s.execute(
-                select(TripModel).where(TripModel.public_id == trip_public_id)
+                select(TripModel).where(TripModel.public_id == trip_public_id),
             )
         ).scalar_one()
 
@@ -241,7 +237,8 @@ async def test_public_share_media_privacy_bypass_fixed(
     # 8. Upload media for old spot
     files_old = {"file": ("old.png", png_content, "image/png")}
     r_upload_old = await authed.post(
-        f"/overnight-spots/{spot_old_public_id}/media", files=files_old
+        f"/overnight-spots/{spot_old_public_id}/media",
+        files=files_old,
     )
     assert r_upload_old.status_code == 200, r_upload_old.text
     old_media_id = r_upload_old.json()["id"]
@@ -280,7 +277,7 @@ async def test_public_share_downsampling(
     client: httpx.AsyncClient,
     account: Account,
 ):
-    start = datetime.now(timezone.utc) - timedelta(days=5)
+    start = datetime.now(UTC) - timedelta(days=5)
     trip_res = await authed.post(
         "/trips",
         json={
@@ -301,7 +298,7 @@ async def test_public_share_downsampling(
 
         trip_db = (
             await s.execute(
-                select(TripModel).where(TripModel.public_id == trip_public_id)
+                select(TripModel).where(TripModel.public_id == trip_public_id),
             )
         ).scalar_one()
 
@@ -346,7 +343,7 @@ async def test_share_link_unique_names(
 ):
     """Verify that user cannot create or update a share link to a duplicate name."""
     # 1. Create a trip
-    start = datetime.now(timezone.utc) - timedelta(days=5)
+    start = datetime.now(UTC) - timedelta(days=5)
     trip_res = await authed.post(
         "/trips",
         json={
@@ -422,7 +419,7 @@ async def test_public_share_password_protection(
 ):
     """Verify password protection and cookie session unlock flow."""
     # 1. Create a trip
-    start = datetime.now(timezone.utc) - timedelta(days=5)
+    start = datetime.now(UTC) - timedelta(days=5)
     trip_res = await authed.post(
         "/trips",
         json={
@@ -443,7 +440,7 @@ async def test_public_share_password_protection(
 
         trip_db = (
             await s.execute(
-                select(TripModel).where(TripModel.public_id == trip_public_id)
+                select(TripModel).where(TripModel.public_id == trip_public_id),
             )
         ).scalar_one()
         spot = OvernightSpot(
@@ -464,7 +461,8 @@ async def test_public_share_password_protection(
     png_content = b"\x89PNG\r\n\x1a\n"
     files = {"file": ("spot.png", png_content, "image/png")}
     r_upload = await authed.post(
-        f"/overnight-spots/{spot_public_id}/media", files=files
+        f"/overnight-spots/{spot_public_id}/media",
+        files=files,
     )
     assert r_upload.status_code == 200
     media_id = r_upload.json()["id"]
@@ -497,14 +495,16 @@ async def test_public_share_password_protection(
 
     # 7. Try wrong password -> expect 401 Incorrect password
     verify_res = await client.post(
-        f"/share/{share_token}/verify", json={"password": "wrong"}
+        f"/share/{share_token}/verify",
+        json={"password": "wrong"},
     )
     assert verify_res.status_code == 401
     assert verify_res.json()["detail"] == "Incorrect password"
 
     # 8. Verify with correct password -> expect 200 with cookies
     verify_res = await client.post(
-        f"/share/{share_token}/verify", json={"password": "super-secure-password"}
+        f"/share/{share_token}/verify",
+        json={"password": "super-secure-password"},
     )
     assert verify_res.status_code == 200
     assert verify_res.json() == {"ok": True}
@@ -525,3 +525,46 @@ async def test_public_share_password_protection(
     media_res = await client.get(f"/share/{share_token}/media/{media_id}")
     assert media_res.status_code == 200
     assert media_res.content == png_content
+
+
+@pytest.mark.asyncio
+async def test_share_link_round_trips_tenant_extraction(
+    authed: httpx.AsyncClient,
+    client: httpx.AsyncClient,
+    account: Account,
+):
+    """Creating a share link and then fetching the public share by token must
+    route to the correct tenant database. This guards against tenant-id extraction
+    that relies on the secret length instead of the delimiter.
+    """
+    start = datetime.now(UTC) - timedelta(days=5)
+    trip_res = await authed.post(
+        "/trips",
+        json={
+            "device_id": str(account.device_pid),
+            "name": "Round Trip Share",
+            "started_at": start.isoformat(),
+            "ended_at": None,
+        },
+    )
+    assert trip_res.status_code == 200, trip_res.text
+    trip_id = trip_res.json()["id"]
+
+    share_res = await authed.post(
+        "/share-links",
+        json={
+            "trip_id": trip_id,
+            "name": "Round Trip Link",
+            "delay_hours": 0,
+        },
+    )
+    assert share_res.status_code == 201, share_res.text
+    share_link = share_res.json()
+    share_token = share_link["token"]
+
+    # Token must be tenant_id + "_" + secret; tenant_id has no underscores.
+    assert share_token.startswith(account.tenant_id + "_"), "share token format changed"
+
+    public_res = await client.get(f"/share/{share_token}")
+    assert public_res.status_code == 200, public_res.text
+    assert public_res.json()["trip_name"] == "Round Trip Share"

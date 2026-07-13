@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from math import asin, cos, radians, sin, sqrt
 
 from sqlalchemy import select
@@ -38,8 +38,8 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 def _to_utc(dt: datetime) -> datetime:
     """Normalize datetime to UTC, handling naive datetimes from SQLite."""
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+        return dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
 
 
 def _is_isolated_spike(a: PositionData, b: PositionData, c: PositionData, device_id: int | None = None) -> bool:

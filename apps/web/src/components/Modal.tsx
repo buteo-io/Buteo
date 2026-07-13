@@ -12,7 +12,15 @@ type Props = {
   error?: string | null;
 };
 
-export function Modal({ open, title, onClose, children, footer, width = 640, error }: Props) {
+export function Modal({
+  open,
+  title,
+  onClose,
+  children,
+  footer,
+  width = 640,
+  error,
+}: Props) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -40,7 +48,11 @@ export function Modal({ open, title, onClose, children, footer, width = 640, err
           </button>
         </header>
         <div className="modal-body">
-          {error && <div className="err small" role="alert">{error}</div>}
+          {error && (
+            <div className="err small" role="alert">
+              {error}
+            </div>
+          )}
           {children}
         </div>
         {footer && <footer className="modal-footer">{footer}</footer>}
@@ -66,4 +78,3 @@ export function Field({
     </div>
   );
 }
-

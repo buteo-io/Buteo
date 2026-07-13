@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    name: pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dev dependencies
+        run: |
+          pip install -e packages/core
+          pip install -r apps/api/requirements-dev.txt
+          pip install -r apps/ingest/requirements.txt
+
+      - name: Run tests
+        run: |
+          mkdir -p /tmp/buteo-test
+          pytest apps/api
+        env:
+          DATA_DIR: /tmp/buteo-test
+          JWT_SECRET: test-secret-not-for-prod-ci-use-only-xx
+
+  lint:
+    name: ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dev dependencies
+        run: |
+          pip install -e packages/core
+          pip install -r apps/api/requirements-dev.txt
+
+      - name: Run ruff
+        run: |
+          ruff check --config packages/core/pyproject.toml apps/api packages/core
+
+  web-typecheck:
+    name: web typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: apps/web
+
+      - name: Type-check
+        run: npx tsc -b
+        working-directory: apps/web
+
+  web-lint:
+    name: web lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: apps/web
+
+      - name: Lint
+        run: npm run lint
+        working-directory: apps/web
+
+      - name: Check formatting
+        run: npm run format:check
+        working-directory: apps/web
+
+  web-test:
+    name: web test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: apps/web
+
+      - name: Run tests
+        run: npm test
+        working-directory: apps/web

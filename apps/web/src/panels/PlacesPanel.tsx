@@ -13,12 +13,7 @@ type Props = {
 
 const CATEGORY_ORDER = ["POI", "Drinking Water", "Camping", "Parking"];
 
-export function PlacesPanel({
-  places,
-  onFly,
-  onEdit,
-  onDelete,
-}: Props) {
+export function PlacesPanel({ places, onFly, onEdit, onDelete }: Props) {
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
@@ -71,8 +66,14 @@ export function PlacesPanel({
               className="category-header-btn"
               onClick={() => toggleCategory(cat)}
             >
-              <div className="row gap small" style={{ alignItems: "center", width: "100%" }}>
-                <span className={`chevron ${isCollapsed ? "collapsed" : ""}`} aria-hidden="true">
+              <div
+                className="row gap small"
+                style={{ alignItems: "center", width: "100%" }}
+              >
+                <span
+                  className={`chevron ${isCollapsed ? "collapsed" : ""}`}
+                  aria-hidden="true"
+                >
                   ▸
                 </span>
                 <PlaceTypeIcon type={cat} size={14} className="muted" />
@@ -85,7 +86,13 @@ export function PlacesPanel({
             {!isCollapsed && (
               <ul className="list">
                 {catPlaces.map((p) => (
-                  <PlaceItem key={p.id} p={p} onFly={onFly} onEdit={onEdit} onDelete={onDelete} />
+                  <PlaceItem
+                    key={p.id}
+                    p={p}
+                    onFly={onFly}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                  />
                 ))}
               </ul>
             )}

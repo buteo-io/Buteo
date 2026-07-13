@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import { api, Entity, Device } from "../api";
 
 type EntityContextType = {
@@ -44,15 +51,16 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
           if (updatedEntity) {
             setActiveEntity(updatedEntity);
             if (device) {
-              const updatedDevice = updatedEntity.devices.find((d) => d.id === device.id) || 
-                                    devices.find((d) => d.id === device.id);
+              const updatedDevice =
+                updatedEntity.devices.find((d) => d.id === device.id) ||
+                devices.find((d) => d.id === device.id);
               if (updatedDevice) setDevice(updatedDevice);
             }
           }
         }
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -63,16 +71,21 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSetDevice = useCallback((dev: Device | null) => {
-    setDevice(dev);
-    if (dev) {
-      // Find parent entity and update activeEntity
-      const parent = entities.find((ent) => ent.devices.some((d) => d.id === dev.id));
-      if (parent) {
-        setActiveEntity(parent);
+  const handleSetDevice = useCallback(
+    (dev: Device | null) => {
+      setDevice(dev);
+      if (dev) {
+        // Find parent entity and update activeEntity
+        const parent = entities.find((ent) =>
+          ent.devices.some((d) => d.id === dev.id),
+        );
+        if (parent) {
+          setActiveEntity(parent);
+        }
       }
-    }
-  }, [entities]);
+    },
+    [entities],
+  );
 
   const handleSetActiveEntity = useCallback((ent: Entity | null) => {
     setActiveEntity(ent);
@@ -103,6 +116,7 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useEntity() {
   const context = useContext(EntityContext);
   if (!context) {

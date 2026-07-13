@@ -5,7 +5,7 @@ the API exposes no write endpoint (writes flow through the ingest TCP server).
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
 from tracker_core.store.core_db import CoreSessionLocal as SessionLocal
@@ -15,7 +15,7 @@ from .conftest import Account
 
 
 async def _seed(device_id: int, n: int = 3) -> list[datetime]:
-    base = datetime.now(tz=timezone.utc) - timedelta(minutes=n)
+    base = datetime.now(tz=UTC) - timedelta(minutes=n)
     out: list[datetime] = []
     async with SessionLocal() as s:
         for i in range(n):
