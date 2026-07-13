@@ -449,7 +449,6 @@ export default function App() {
             places={places}
             onFly={(p) => {
               map.current?.flyTo(p.lon, p.lat, 14);
-              setDetailsModal({ type: "place", place: p });
               closeOverlay();
             }}
             onEdit={(p) => setPlaceModal({ mode: "edit", place: p })}
