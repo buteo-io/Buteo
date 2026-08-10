@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 
 type Props = {
   open: boolean;
@@ -21,8 +21,18 @@ export function Modal({
   width = 640,
   error,
 }: Props) {
+  // Track where the pointer went down so the backdrop only closes on a click
+  // that genuinely started on the backdrop itself. On mobile, opening the
+  // keyboard (e.g. via an autofocused input) resizes the viewport and the
+  // fixed-position modal repositions, which can dispatch a synthesized "ghost"
+  // click on the backdrop at the original tap coordinates. Ghost clicks carry
+  // no preceding pointerdown on the backdrop, so this guard drops them while
+  // still allowing real outside clicks (and ignoring drag-from-inside).
+  const downOnBackdrop = useRef(false);
+
   useEffect(() => {
     if (!open) return;
+    downOnBackdrop.current = false;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -32,11 +42,23 @@ export function Modal({
 
   if (!open) return null;
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div
+      className="modal-backdrop"
+      onPointerDown={(e) => {
+        downOnBackdrop.current = e.target === e.currentTarget;
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && downOnBackdrop.current) {
+          downOnBackdrop.current = false;
+          onClose();
+        }
+      }}
+    >
       <div
         className="modal"
         style={{ width }}
         onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={title}
