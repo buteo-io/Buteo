@@ -141,6 +141,10 @@ async def get_tenant_by_imei(imei: str) -> str | None:
         if not tenant or not tenant.is_active:
             return None
         if Feature.CAN_WRITE not in (tenant.features or []):
+            logger.warning(
+                "ingest rejected: missing can_write feature",
+                extra={"imei": imei, "tenant_id": tenant.tenant_id},
+            )
             return None
         return tenant.tenant_id
 
